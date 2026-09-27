@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="src/main/resources/logo.png" width="160" alt="Recruits RTS Command icon">
+</p>
+
 # Recruits RTS Command
 
 Recruits RTS Command adds group selection and map orders to the tactical map in [Villager Recruits](https://modrinth.com/mod/villager-recruits).
