@@ -24,6 +24,8 @@ Minecraft 1.20.1 and Forge 47 are supported.
 
 [Siegeworks](https://github.com/mess1re/siegeworks) supports issuing orders to siege equipment from the tactical map.
 
+See the [wiki](https://github.com/mess1re/recruitsrtscommand/wiki) for controls, orders and server configuration.
+
 ## API
 
 Release builds are available through JitPack:
