@@ -390,6 +390,17 @@ public final class WorldMapCommandOverlay implements WorldMapOverlay {
             return true;
         }
 
+        // A fire zone goes to the selected engines' crews too, so it must not turn into a drive order.
+        if (MapCommandClientState.activeTool() == MapCommandTool.FIRE
+                && (!selected.isEmpty() || MapCommandClientState.hasObjectSelection())) {
+            drawingZone = true;
+            zoneCenterX = mouseX;
+            zoneCenterY = mouseY;
+            zoneEdgeX = mouseX;
+            zoneEdgeY = mouseY;
+            return true;
+        }
+
         if (MapCommandClientState.hasObjectSelection()) {
             BlockPos target = screenToWorld(mouseX, mouseY);
             for (MapObjectSnapshot machine : MapCommandClientState.objects(minecraft.level)) {
@@ -414,14 +425,6 @@ public final class WorldMapCommandOverlay implements WorldMapOverlay {
             return true;
         }
 
-        if (MapCommandClientState.activeTool() == MapCommandTool.FIRE) {
-            drawingZone = true;
-            zoneCenterX = mouseX;
-            zoneCenterY = mouseY;
-            zoneEdgeX = mouseX;
-            zoneEdgeY = mouseY;
-            return true;
-        }
         issueMoveOrder(mouseX, mouseY);
         return true;
     }
@@ -453,15 +456,15 @@ public final class WorldMapCommandOverlay implements WorldMapOverlay {
     private void issueZoneOrder() {
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.level == null) return;
-        List<CommandGroupSnapshot> selected = MapCommandClientState.selectedForDimensionSnapshots(minecraft.level);
-        if (selected.isEmpty()) return;
+        List<UUID> gunners = MapCommandClientState.selectedGunners();
+        if (gunners.isEmpty()) return;
 
         int[] reach = zoneReachBlocks();
         if (reach[0] < MIN_ZONE_RADIUS || reach[1] < MIN_ZONE_RADIUS) {
             return;
         }
         MapCommandNetworkClient.strategicFire(MapCommandClientState.selectionId(),
-                MapCommandClientState.selectedGunners(), screenToWorld(zoneCenterX, zoneCenterY),
+                gunners, screenToWorld(zoneCenterX, zoneCenterY),
                 reach[0], reach[1], MapCommandClientState.fireZoneShape());
     }
 
@@ -2283,7 +2286,7 @@ public final class WorldMapCommandOverlay implements WorldMapOverlay {
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.level == null) return;
         List<CommandGroupSnapshot> selected = MapCommandClientState.selectedForDimensionSnapshots(minecraft.level);
-        if (selected.isEmpty()) return;
+        if (MapCommandClientState.selectedGunners().isEmpty()) return;
 
         int[] reach = zoneReachBlocks();
         double radiusX = Math.max(3.0D, reach[0] * view.scale());
