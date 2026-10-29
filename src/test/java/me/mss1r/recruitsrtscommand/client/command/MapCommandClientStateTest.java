@@ -35,6 +35,25 @@ class MapCommandClientStateTest {
     }
 
     @Test
+    void worldResetDiscardsControlGroupsAndCommandMode() {
+        MapCommandClientState.select(List.of(crewId), List.of(objectId), false);
+        MapCommandClientState.storeControlGroup(0);
+        MapCommandClientState.setCommandModeEnabled(true);
+        MapCommandClientState.setActiveTool(MapCommandTool.FIRE);
+        MapCommandClientState.cycleFireZoneShape();
+        UUID oldSelection = MapCommandClientState.selectionId();
+
+        MapCommandClientState.clear();
+        MapCommandClientState.recallControlGroup(0, false);
+
+        assertFalse(MapCommandClientState.hasAnything());
+        assertFalse(MapCommandClientState.isCommandModeEnabled());
+        assertEquals(MapCommandTool.MOVE, MapCommandClientState.activeTool());
+        assertEquals(FireZoneShape.CIRCLE, MapCommandClientState.fireZoneShape());
+        assertFalse(oldSelection.equals(MapCommandClientState.selectionId()));
+    }
+
+    @Test
     void crewOnlyFireZoneSurvivesSnapshotCleanup() {
         MapCommandClientState.updateObjects(List.of(object(List.of(crewId), List.of())), owner);
         MapCommandClientState.rememberStrategicFireOrder(

@@ -336,6 +336,13 @@ public final class MapCommandClientState {
         OBJECTS.clear();
         PENDING.clear();
         FIRE_ZONES.clear();
+        MISSING_SYNCS.clear();
+        Collections.fill(CONTROL_GROUPS, Set.of());
+        Collections.fill(CONTROL_GROUP_OBJECTS, Set.of());
+        selectionId = UUID.randomUUID();
+        commandModeEnabled = false;
+        activeTool = MapCommandTool.MOVE;
+        fireZoneShape = FireZoneShape.CIRCLE;
         manualDeselect = false;
     }
 

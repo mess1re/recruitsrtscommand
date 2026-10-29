@@ -9,6 +9,7 @@ import com.talhanation.recruits.world.RecruitsPlayerInfo;
 import me.mss1r.recruitsrtscommand.api.WorldMapOverlay;
 import me.mss1r.recruitsrtscommand.api.WorldMapView;
 import me.mss1r.recruitsrtscommand.client.command.MapCommandClientState;
+import me.mss1r.recruitsrtscommand.client.command.MapCameraMotion;
 import me.mss1r.recruitsrtscommand.client.command.ClientGroups;
 import me.mss1r.recruitsrtscommand.client.command.MapCommandNetworkClient;
 import me.mss1r.recruitsrtscommand.client.command.SquadClusters;
@@ -98,7 +99,6 @@ public final class WorldMapCommandOverlay implements WorldMapOverlay {
     private static final int BUTTON_AGGRO = 7;
     private static final int BUTTON_SHIELDS = 8;
     private static final int BAR_BUTTONS = 9;
-    private static final double PAN_SPEED = 7.0D;
     private static final int[] FORMATION_CYCLE = {7, 4, 2, 5, 1, 3, 6, 8, 0};
 
     private static final ResourceLocation ICON_FORMATION_NONE = recruitsIcon("textures/gui/image/none.png");
@@ -143,6 +143,7 @@ public final class WorldMapCommandOverlay implements WorldMapOverlay {
     private static final ResourceLocation ICON_CAVALRY = recruitsIcon("textures/gui/image/group/horse.png");
 
     private WorldMapView view;
+    private final MapCameraMotion cameraMotion = new MapCameraMotion();
     private boolean selectingSquads;
     private boolean showControls;
     private boolean drawingZone;
@@ -176,10 +177,38 @@ public final class WorldMapCommandOverlay implements WorldMapOverlay {
     private WorldMapCommandOverlay() {
     }
 
+    public void reset() {
+        view = null;
+        cameraMotion.reset();
+        selectingSquads = false;
+        showControls = false;
+        drawingZone = false;
+        movingZone = null;
+        movingGrabX = movingGrabY = 0.0D;
+        movingZoneDragged = false;
+        formationOpen = false;
+        aggroOpen = false;
+        hoveredCluster = null;
+        typeSegments.clear();
+        enemyMenuTarget = null;
+        objectMenuTarget = null;
+        pendingObjectOrder = null;
+        enemyMenuX = enemyMenuY = 0.0D;
+        clusters = List.of();
+        lastBannerClickMillis = 0L;
+        lastBannerClicked = null;
+        zoneCenterX = zoneCenterY = zoneEdgeX = zoneEdgeY = 0.0D;
+        selectionMoved = false;
+        selectionStartX = selectionStartY = selectionCurrentX = selectionCurrentY = 0.0D;
+    }
+
     @Override
     public void renderMap(GuiGraphics graphics, int mouseX, int mouseY, float partialTicks, WorldMapView view) {
         this.view = view;
-        if (!MapCommandClientState.isCommandModeEnabled()) return;
+        if (!MapCommandClientState.isCommandModeEnabled()) {
+            cameraMotion.reset();
+            return;
+        }
 
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.level == null) return;
@@ -241,6 +270,7 @@ public final class WorldMapCommandOverlay implements WorldMapOverlay {
             if (MapCommandNetworkClient.available()) {
                 MapCommandClientState.toggleCommandMode();
                 if (MapCommandClientState.isCommandModeEnabled()) MapCommandNetworkClient.requestSync();
+                else reset();
             }
             return true;
         }
@@ -2328,12 +2358,13 @@ public final class WorldMapCommandOverlay implements WorldMapOverlay {
     }
 
     private void panMap() {
+        double speed = cameraMotion.advance(System.nanoTime());
         double dx = 0.0D;
         double dy = 0.0D;
-        if (isKeyDown(GLFW.GLFW_KEY_A) || isKeyDown(GLFW.GLFW_KEY_LEFT)) dx += PAN_SPEED;
-        if (isKeyDown(GLFW.GLFW_KEY_D) || isKeyDown(GLFW.GLFW_KEY_RIGHT)) dx -= PAN_SPEED;
-        if (isKeyDown(GLFW.GLFW_KEY_W) || isKeyDown(GLFW.GLFW_KEY_UP)) dy += PAN_SPEED;
-        if (isKeyDown(GLFW.GLFW_KEY_S) || isKeyDown(GLFW.GLFW_KEY_DOWN)) dy -= PAN_SPEED;
+        if (isKeyDown(GLFW.GLFW_KEY_A) || isKeyDown(GLFW.GLFW_KEY_LEFT)) dx += speed;
+        if (isKeyDown(GLFW.GLFW_KEY_D) || isKeyDown(GLFW.GLFW_KEY_RIGHT)) dx -= speed;
+        if (isKeyDown(GLFW.GLFW_KEY_W) || isKeyDown(GLFW.GLFW_KEY_UP)) dy += speed;
+        if (isKeyDown(GLFW.GLFW_KEY_S) || isKeyDown(GLFW.GLFW_KEY_DOWN)) dy -= speed;
 
         if (dx != 0.0D || dy != 0.0D) {
             view.pan(dx, dy);

@@ -13,6 +13,7 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 public final class RecruitsRTSCommandClientEvents {
     private static final int COMMAND_SYNC_INTERVAL_TICKS = 10;
     private int commandSyncTickCounter = 0;
+    private boolean mapWasOpen;
 
     public RecruitsRTSCommandClientEvents() {
         WorldMapOverlayRegistry.register(WorldMapCommandOverlay.INSTANCE);
@@ -28,13 +29,18 @@ public final class RecruitsRTSCommandClientEvents {
             MapCommandNetworkClient.requestSync();
         } else if (!mapOpen) {
             commandSyncTickCounter = 0;
+            if (mapWasOpen) WorldMapCommandOverlay.INSTANCE.reset();
         }
+        mapWasOpen = mapOpen;
     }
 
     @SubscribeEvent
     public void onWorldUnload(LevelEvent.Unload event) {
         if (event.getLevel().isClientSide()) {
             MapCommandClientState.clear();
+            WorldMapCommandOverlay.INSTANCE.reset();
+            commandSyncTickCounter = 0;
+            mapWasOpen = false;
         }
     }
 }
