@@ -42,9 +42,10 @@ public record S2CCommandMapSnapshotsPacket(List<CommandGroupSnapshot> snapshots,
                 CommandUnitType unitType = CommandPacketCodecs.readUnitType(buf);
                 int health = buf.readUnsignedByte();
                 int stance = buf.readUnsignedByte();
+                float heading = buf.readFloat();
                 units.add(new CommandUnitSnapshot(unitId, unitPos, unitType, health,
                         stance & 0x0F, (stance & 0x10) != 0, (stance & 0x20) != 0,
-                        (stance & 0x40) != 0));
+                        (stance & 0x40) != 0, heading));
             }
             snapshots.add(new CommandGroupSnapshot(selectionId, ownerId, anchor, dimension, units));
         }
@@ -128,6 +129,7 @@ public record S2CCommandMapSnapshotsPacket(List<CommandGroupSnapshot> snapshots,
                 buf.writeByte(unit.health());
                 buf.writeByte((unit.aggro() & 0x0F) | (unit.shields() ? 0x10 : 0)
                         | (unit.canVolley() ? 0x20 : 0) | (unit.firing() ? 0x40 : 0));
+                buf.writeFloat(unit.heading());
             }
         }
 

@@ -45,6 +45,8 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
+import static me.mss1r.recruitsrtscommand.client.gui.worldmap.command.TacticalSymbolPalette.*;
+
 public final class WorldMapCommandOverlay implements WorldMapOverlay {
     public static final WorldMapCommandOverlay INSTANCE = new WorldMapCommandOverlay();
 
@@ -66,10 +68,6 @@ public final class WorldMapCommandOverlay implements WorldMapOverlay {
     private static final int OUTLINE = 0x50FFFFFF;
     private static final int OUTLINE_HOVERED = 0x90FFFFFF;
     private static final int OUTLINE_SELECTED = 0xFF2BEA68;
-    private static final int OWN_COLOR = 0xFF2BEA68;
-    private static final int ALLY_COLOR = 0xFF49D5FF;
-    private static final int NEUTRAL_COLOR = 0xFFFFD45A;
-    private static final int ENEMY_COLOR = 0xFFFF5555;
     private static final int PATH_COLOR = 0xE8FFE66A;
     private static final int FIRE_ZONE_COLOR = 0xE8FF665A;
     private static final int SIEGE_ZONE_COLOR = 0xE8FFA83A;
@@ -163,6 +161,7 @@ public final class WorldMapCommandOverlay implements WorldMapOverlay {
     private double enemyMenuX;
     private double enemyMenuY;
     private List<SquadClusters.Cluster> clusters = List.of();
+    private final SquadClusters.Cache clusterCache = new SquadClusters.Cache();
     private long lastBannerClickMillis;
     private UUID lastBannerClicked;
     private double zoneCenterX;
@@ -196,6 +195,7 @@ public final class WorldMapCommandOverlay implements WorldMapOverlay {
         pendingObjectOrder = null;
         enemyMenuX = enemyMenuY = 0.0D;
         clusters = List.of();
+        clusterCache.clear();
         lastBannerClickMillis = 0L;
         lastBannerClicked = null;
         zoneCenterX = zoneCenterY = zoneEdgeX = zoneEdgeY = 0.0D;
@@ -216,7 +216,7 @@ public final class WorldMapCommandOverlay implements WorldMapOverlay {
 
         List<CommandGroupSnapshot> snapshots = MapCommandClientState.snapshotsForDimension(minecraft.level);
         Set<UUID> selectedIds = selectedIds(minecraft.level);
-        clusters = SquadClusters.of(snapshots);
+        clusters = clusterCache.update(MapCommandClientState.snapshotRevision(), snapshots);
         SquadClusters.Cluster hovered = findClusterAtScreen(mouseX, mouseY);
 
         renderRoutes(graphics);
@@ -914,6 +914,19 @@ public final class WorldMapCommandOverlay implements WorldMapOverlay {
     }
 
     private void renderSquadMarker(GuiGraphics graphics, SquadClusters.Cluster cluster, boolean selected, boolean hovered) {
+        if (usesTacticalSymbols()) {
+            TacticalSymbolLayout layout = TacticalSymbolLayout.of(cluster.body(), view.scale());
+            double x = markerCenterX(cluster);
+            double y = worldToScreenY(cluster.centerZ());
+            TacticalSymbolRenderer.draw(graphics, layout, x, y, relationColor(cluster.ownerId()), selected, hovered);
+            if (layout.width() >= 12 || selected || hovered) {
+                double scale = Mth.clamp(layout.width() / 22, 0.65D, 1);
+                double countWidth = Minecraft.getInstance().font.width(strengthLabel(cluster)) * scale;
+                renderSquadStrength(graphics, cluster, x - countWidth / 2,
+                        y + layout.bottomExtent() + 3, scale);
+            }
+            return;
+        }
         double centerX = markerCenterX(cluster);
         double size = markerIconSize();
         double top = markerTop(cluster);
@@ -1014,14 +1027,22 @@ public final class WorldMapCommandOverlay implements WorldMapOverlay {
     }
 
     private void renderSquadStrength(GuiGraphics graphics, SquadClusters.Cluster cluster, double x, double y) {
-        Font font = Minecraft.getInstance().font;
-        String strength = cluster.whole()
-                ? String.valueOf(cluster.strength())
+        renderSquadStrength(graphics, cluster, x, y, 1.0D);
+    }
+
+    private String strengthLabel(SquadClusters.Cluster cluster) {
+        return cluster.whole() ? String.valueOf(cluster.strength())
                 : cluster.strength() + "/" + cluster.snapshot().totalUnits();
+    }
+
+    private void renderSquadStrength(GuiGraphics graphics, SquadClusters.Cluster cluster, double x, double y, double scale) {
+        Font font = Minecraft.getInstance().font;
+        String strength = strengthLabel(cluster);
         int width = font.width(strength);
 
         graphics.pose().pushPose();
         graphics.pose().translate(x, y, 0.0D);
+        graphics.pose().scale((float) scale, (float) scale, 1.0F);
         graphics.fill(-1, -1, width + 1, 9, 0xE010141B);
         graphics.drawString(font, strength, 0, 0, 0xFFF2D98C, false);
         graphics.pose().popPose();
@@ -1086,7 +1107,9 @@ public final class WorldMapCommandOverlay implements WorldMapOverlay {
 
     private void renderUnitDots(GuiGraphics graphics, CommandGroupSnapshot snapshot, boolean selected) {
         if (snapshot.units() == null || snapshot.units().isEmpty()) return;
-        if (!selected && view.scale() < UNIT_DOT_MIN_ZOOM) return;
+        if (usesTacticalSymbols()) return;
+        if (!selected && view.scale() < UNIT_DOT_MIN_ZOOM
+                && MapCommandClientState.activeTool() != MapCommandTool.PICK) return;
 
         int relation = relationColor(snapshot.ownerId());
         Minecraft minecraft = Minecraft.getInstance();
@@ -1101,7 +1124,7 @@ public final class WorldMapCommandOverlay implements WorldMapOverlay {
 
         for (CommandUnitSnapshot unit : snapshot.units()) {
             boolean commanded = !anySelected || MapCommandClientState.isUnitSelected(unit.unitId());
-            int color = unitColor(unit.type(), relation);
+            int color = relation;
             drawDot(graphics, worldToScreenX(smoothX(unit.unitId(), unit.position().getX())),
                     worldToScreenY(smoothZ(unit.unitId(), unit.position().getZ())),
                     radius, commanded ? color : dimmed(color));
@@ -2126,6 +2149,11 @@ public final class WorldMapCommandOverlay implements WorldMapOverlay {
         for (int i = clusters.size() - 1; i >= 0; i--) {
             SquadClusters.Cluster cluster = clusters.get(i);
             double x = markerCenterX(cluster);
+            if (usesTacticalSymbols()) {
+                double y = worldToScreenY(cluster.centerZ());
+                if (TacticalSymbolLayout.of(cluster.body(), view.scale()).contains(mouseX - x, mouseY - y, 2)) return cluster;
+                continue;
+            }
             double y = markerTop(cluster) + size / 2.0D;
             if (Math.abs(mouseX - x) <= reach && Math.abs(mouseY - y) <= reach) return cluster;
         }
@@ -2273,11 +2301,18 @@ public final class WorldMapCommandOverlay implements WorldMapOverlay {
         double bottom = Math.max(selectionStartY, selectionCurrentY);
         List<UUID> boxed = new ArrayList<>();
         UUID localPlayerId = minecraft.player.getUUID();
-        for (CommandGroupSnapshot snapshot : MapCommandClientState.snapshotsForDimension(minecraft.level)) {
+        if (usesTacticalSymbols()) {
+            for (SquadClusters.Cluster cluster : clusters) {
+                if (!localPlayerId.equals(cluster.ownerId())) continue;
+                double x = worldToScreenX(cluster.centerX());
+                double y = worldToScreenY(cluster.centerZ());
+                if (x >= left && x <= right && y >= top && y <= bottom) boxed.addAll(cluster.members());
+            }
+        } else for (CommandGroupSnapshot snapshot : MapCommandClientState.snapshotsForDimension(minecraft.level)) {
             if (!localPlayerId.equals(snapshot.ownerId())) continue;
             for (CommandUnitSnapshot unit : snapshot.units()) {
-                double x = worldToScreenX(unit.position().getX());
-                double y = worldToScreenY(unit.position().getZ());
+                double x = worldToScreenX(smoothX(unit.unitId(), unit.position().getX()));
+                double y = worldToScreenY(smoothZ(unit.unitId(), unit.position().getZ()));
                 if (x >= left && x <= right && y >= top && y <= bottom) {
                     boxed.add(unit.unitId());
                 }
@@ -2451,11 +2486,8 @@ public final class WorldMapCommandOverlay implements WorldMapOverlay {
         return NEUTRAL_COLOR;
     }
 
-    private int unitColor(CommandUnitType type, int relationColor) {
-        int alpha = 0xFF000000;
-        if (type == CommandUnitType.RANGED) return alpha | 0xFFD85A;
-        if (type == CommandUnitType.CAVALRY) return alpha | 0x61D6FF;
-        return relationColor;
+    private boolean usesTacticalSymbols() {
+        return TacticalSymbolLayout.visible(view.scale(), MapCommandClientState.activeTool() == MapCommandTool.PICK);
     }
 
     private RecruitsFaction findFactionForOwner(UUID ownerId) {

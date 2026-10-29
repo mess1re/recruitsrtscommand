@@ -877,7 +877,7 @@ public final class MapCommandOrderService {
                 .map(recruit -> new CommandUnitSnapshot(recruit.getUUID(), recruit.blockPosition(),
                         dominantType(recruit), healthPercent(recruit),
                         recruit.getState(), recruit.getShouldBlock(), canVolley(recruit),
-                        recruit.getShouldRanged()))
+                        recruit.getShouldRanged(), Mth.wrapDegrees(recruit.yBodyRot)))
                 .toList();
     }
 
@@ -916,7 +916,7 @@ public final class MapCommandOrderService {
             if (scouting && !withinSight(unit, watchers)) continue;
             seen.add(new CommandUnitSnapshot(unit.unitId(), unit.position(), unit.type(),
                     tellHealth ? unit.health() : HEALTH_UNKNOWN,
-                    CommandUnitSnapshot.AGGRO_UNKNOWN, false, false, false));
+                    CommandUnitSnapshot.AGGRO_UNKNOWN, false, false, false, unit.heading()));
         }
         return seen;
     }

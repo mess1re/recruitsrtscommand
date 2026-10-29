@@ -34,6 +34,7 @@ public final class MapCommandClientState {
     private static final long ORDER_ECHO_GRACE_MILLIS = 2_000L;
 
     private static boolean commandModeEnabled = false;
+    private static long snapshotRevision;
     private static final Set<UUID> SELECTED_UNITS = new LinkedHashSet<>();
     private static final Set<UUID> SELECTED_OBJECTS = new LinkedHashSet<>();
     private static final int MISSING_SYNCS_BEFORE_DROPPED = 4;
@@ -47,6 +48,7 @@ public final class MapCommandClientState {
     }
 
     public static void updateSnapshots(List<CommandGroupSnapshot> snapshots, UUID localPlayerId) {
+        snapshotRevision++;
         SNAPSHOTS.clear();
         long now = System.currentTimeMillis();
         Set<UUID> seen = new LinkedHashSet<>();
@@ -328,6 +330,7 @@ public final class MapCommandClientState {
     }
 
     public static void clear() {
+        snapshotRevision++;
         SNAPSHOTS.clear();
         MapPositionSmoothing.clear();
         SELECTED_UNITS.clear();
@@ -534,6 +537,10 @@ public final class MapCommandClientState {
 
     public static FireZoneShape fireZoneShape() {
         return fireZoneShape;
+    }
+
+    public static long snapshotRevision() {
+        return snapshotRevision;
     }
 
     public static void cycleFireZoneShape() {

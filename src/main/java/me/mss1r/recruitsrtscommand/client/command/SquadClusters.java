@@ -17,9 +17,29 @@ public final class SquadClusters {
     private SquadClusters() {
     }
 
+    public static final class Cache {
+        private long revision = Long.MIN_VALUE;
+        private List<Cluster> clusters = List.of();
+
+        public List<Cluster> update(long currentRevision, List<CommandGroupSnapshot> snapshots) {
+            if (revision != currentRevision) {
+                clusters = of(snapshots);
+                revision = currentRevision;
+            } else {
+                clusters = clusters.stream().map(SquadClusters::interpolated).toList();
+            }
+            return clusters;
+        }
+
+        public void clear() {
+            revision = Long.MIN_VALUE;
+            clusters = List.of();
+        }
+    }
+
     public record Cluster(CommandGroupSnapshot snapshot, List<UUID> members,
                           double centerX, double centerZ, double reachNorth, int health,
-                          int aggro, boolean shields) {
+                          int aggro, boolean shields, List<CommandUnitSnapshot> body) {
         public UUID selectionId() {
             return snapshot.selectionId();
         }
@@ -85,6 +105,10 @@ public final class SquadClusters {
         return false;
     }
 
+    public static Cluster interpolated(Cluster cluster) {
+        return build(cluster.snapshot(), cluster.body());
+    }
+
     private static Cluster build(CommandGroupSnapshot snapshot, List<CommandUnitSnapshot> body) {
         double sumX = 0.0D;
         double sumZ = 0.0D;
@@ -115,13 +139,13 @@ public final class SquadClusters {
             shields = shields && unit.shields();
         }
         return new Cluster(snapshot, List.copyOf(members), centerX, centerZ, reachNorth,
-                known == 0 ? -1 : health / known, aggro, shields);
+                known == 0 ? -1 : health / known, aggro, shields, List.copyOf(body));
     }
 
     public static int countOf(Cluster cluster, CommandUnitType type) {
         int count = 0;
-        for (CommandUnitSnapshot unit : cluster.snapshot().units()) {
-            if (unit.type() == type && cluster.members().contains(unit.unitId())) count++;
+        for (CommandUnitSnapshot unit : cluster.body()) {
+            if (unit.type() == type) count++;
         }
         return count;
     }

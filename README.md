@@ -12,6 +12,10 @@ Recruits RTS Command adds group selection and map orders to the tactical map in 
 - Issue move, queued move, halt, facing and attack orders from the map.
 - Set formations, spacing, combat behaviour, shield state and fire zones.
 - Display squad positions, routes, health and compatible map objects.
+- Show oriented tactical unit symbols when zoomed out: crossed lines for infantry,
+  a bow for ranged troops, a diagonal for cavalry and a cross for mixed units.
+  Own troops are green, allies blue, neutral troops ochre and enemies red. Unit
+  dots use the same relation colors. Individual picking temporarily restores dots.
 - Keep the tactical map available when the server does not have RTS Command; command controls remain disabled.
 
 ## Dependency
@@ -29,6 +33,10 @@ See the [wiki](https://github.com/mess1re/recruitsrtscommand/wiki) for controls,
 Map updates are accepted at most once every five server ticks per player. A move
 route holds up to 128 waypoints; further queued points are ignored until space is
 available. Fire-zone radii are limited to 48 blocks on both the client and server.
+
+Both sides need the same RTS Command protocol version for command controls.
+The tactical-symbol update includes unit headings in map snapshots and requires
+updating the mod on both the server and clients.
 
 ## API
 
