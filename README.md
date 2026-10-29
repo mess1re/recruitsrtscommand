@@ -55,7 +55,7 @@ repositories {
 }
 
 dependencies {
-    implementation fg.deobf('com.github.mess1re:recruitsrtscommand:0.1.0-beta.1')
+    implementation fg.deobf('com.github.mess1re:recruitsrtscommand:0.1.0-beta.3')
 }
 ```
 
