@@ -4,6 +4,7 @@ import com.talhanation.recruits.client.gui.CommandScreen;
 import me.mss1r.recruitsrtscommand.common.command.CommandGroupSnapshot;
 import me.mss1r.recruitsrtscommand.common.command.CommandUnitSnapshot;
 import me.mss1r.recruitsrtscommand.common.command.CommandUnitType;
+import me.mss1r.recruitsrtscommand.common.command.CommandLimits;
 import me.mss1r.recruitsrtscommand.api.FireZoneShape;
 import me.mss1r.recruitsrtscommand.api.MapObjectAction;
 import me.mss1r.recruitsrtscommand.api.MapObjectSnapshot;
@@ -353,7 +354,6 @@ public final class MapCommandClientState {
         if (target == null || SELECTED_UNITS.isEmpty()) return;
 
         List<UUID> men = List.copyOf(SELECTED_UNITS);
-        List<BlockPos> waypoints = new ArrayList<>();
         PendingRoute existing = null;
         for (PendingRoute pending : PENDING) {
             if (pending.route.members().equals(men)) {
@@ -361,8 +361,9 @@ public final class MapCommandClientState {
                 break;
             }
         }
-        if (append && existing != null) waypoints.addAll(existing.route.waypoints());
-        waypoints.add(target.immutable());
+        List<BlockPos> previous = existing == null ? List.of() : existing.route.waypoints();
+        List<BlockPos> waypoints = previewWaypoints(previous, target, append);
+        if (append && waypoints == previous) return;
 
         PENDING.remove(existing);
         Minecraft minecraft = Minecraft.getInstance();
@@ -372,6 +373,17 @@ public final class MapCommandClientState {
         PENDING.add(new PendingRoute(
                 new CommandOrderRoute(men, dimension, selectedCenter(), waypoints),
                 System.currentTimeMillis()));
+    }
+
+    static List<BlockPos> previewWaypoints(List<BlockPos> previous, BlockPos target, boolean append) {
+        if (!append) return List.of(target.immutable());
+        if (previous.size() >= CommandLimits.MAX_WAYPOINTS
+                || !previous.isEmpty() && previous.get(previous.size() - 1).equals(target)) {
+            return previous;
+        }
+        List<BlockPos> next = new ArrayList<>(previous);
+        next.add(target.immutable());
+        return List.copyOf(next);
     }
 
     public static void updateRoutes(List<CommandOrderRoute> routes) {

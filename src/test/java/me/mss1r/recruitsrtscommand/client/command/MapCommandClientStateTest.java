@@ -35,6 +35,19 @@ class MapCommandClientStateTest {
     }
 
     @Test
+    void routePreviewMatchesServerQueueLimitAndDuplicateRules() {
+        List<BlockPos> points = List.of();
+        for (int index = 0; index < 128; index++) {
+            points = MapCommandClientState.previewWaypoints(points, new BlockPos(index, 64, 0), true);
+        }
+        assertEquals(128, points.size());
+        assertTrue(points == MapCommandClientState.previewWaypoints(points, new BlockPos(999, 64, 0), true));
+        assertEquals(List.of(BlockPos.ZERO), MapCommandClientState.previewWaypoints(points, BlockPos.ZERO, false));
+        List<BlockPos> single = List.of(BlockPos.ZERO);
+        assertTrue(single == MapCommandClientState.previewWaypoints(single, BlockPos.ZERO, true));
+    }
+
+    @Test
     void worldResetDiscardsControlGroupsAndCommandMode() {
         MapCommandClientState.select(List.of(crewId), List.of(objectId), false);
         MapCommandClientState.storeControlGroup(0);
