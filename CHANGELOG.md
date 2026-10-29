@@ -14,6 +14,8 @@
 - Unit dots and symbols share relation colors: own green, allied blue, neutral
   ochre and enemy red. Symbols shrink rather than grow when zooming out.
 - Cluster membership is rebuilt on snapshot updates, not every rendered frame.
+- Escape cancels unfinished fire-zone gestures before a later mouse release can
+  submit them. Empty selections no longer leave stale type-filter hit areas.
 - Server-side limits bound map-update requests, queued waypoints and fire zones;
   snapshot collections are validated before allocation.
 
@@ -21,6 +23,12 @@
 
 - Map snapshots now include unit headings (network protocol 3). Update both the
   server and clients together; the previous command protocol is not compatible.
+
+### Internal
+
+- Separate squad rendering, command bar, context menus, map objects and fire-zone
+  interaction from the root overlay. Server snapshots, visibility and order
+  execution now have independent responsibilities.
 
 ## 0.1.0-beta.2
 
