@@ -9,6 +9,21 @@ public final class MapRenderUtil {
     private MapRenderUtil() {
     }
 
+    public static void dot(GuiGraphics graphics, double centerX, double centerY, double radius, int color) {
+        double inset = radius * 0.42D;
+        fill(graphics, centerX - radius + inset, centerY - radius,
+                centerX + radius - inset, centerY + radius, color);
+        fill(graphics, centerX - radius, centerY - radius + inset,
+                centerX + radius, centerY + radius - inset, color);
+    }
+
+    public static void outline(GuiGraphics graphics, double left, double top, double right, double bottom, int color) {
+        fill(graphics, left, top, right, top + 1.0D, color);
+        fill(graphics, left, bottom - 1.0D, right, bottom, color);
+        fill(graphics, left, top, left + 1.0D, bottom, color);
+        fill(graphics, right - 1.0D, top, right, bottom, color);
+    }
+
     public static void fill(GuiGraphics graphics, double x1, double y1, double x2, double y2, int color) {
         double left = Math.min(x1, x2);
         double right = Math.max(x1, x2);

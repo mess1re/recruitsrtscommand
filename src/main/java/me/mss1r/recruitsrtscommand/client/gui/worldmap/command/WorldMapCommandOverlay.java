@@ -4,20 +4,16 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.talhanation.recruits.client.ClientManager;
 import com.talhanation.recruits.world.RecruitsDiplomacyManager;
 import com.talhanation.recruits.world.RecruitsFaction;
-import com.talhanation.recruits.world.RecruitsGroup;
 import com.talhanation.recruits.world.RecruitsPlayerInfo;
 import me.mss1r.recruitsrtscommand.api.WorldMapOverlay;
 import me.mss1r.recruitsrtscommand.api.WorldMapView;
 import me.mss1r.recruitsrtscommand.client.command.MapCommandClientState;
 import me.mss1r.recruitsrtscommand.client.command.MapCameraMotion;
-import me.mss1r.recruitsrtscommand.client.command.ClientGroups;
 import me.mss1r.recruitsrtscommand.client.command.MapCommandNetworkClient;
 import me.mss1r.recruitsrtscommand.client.command.SquadClusters;
-import me.mss1r.recruitsrtscommand.client.command.MapPositionSmoothing;
 import me.mss1r.recruitsrtscommand.client.command.MapCommandTool;
 import me.mss1r.recruitsrtscommand.client.render.MapRenderUtil;
 import me.mss1r.recruitsrtscommand.common.command.CommandGroupSnapshot;
-import me.mss1r.recruitsrtscommand.common.command.CommandLimits;
 import me.mss1r.recruitsrtscommand.common.command.CommandOrderRoute;
 import me.mss1r.recruitsrtscommand.api.MapObjectAction;
 import me.mss1r.recruitsrtscommand.api.MapObjectSnapshot;
@@ -46,102 +42,13 @@ import java.util.Set;
 import java.util.UUID;
 
 import static me.mss1r.recruitsrtscommand.client.gui.worldmap.command.TacticalSymbolPalette.*;
+import static me.mss1r.recruitsrtscommand.client.gui.worldmap.command.MapCommandStyle.*;
 
 public final class WorldMapCommandOverlay implements WorldMapOverlay {
     public static final WorldMapCommandOverlay INSTANCE = new WorldMapCommandOverlay();
 
-    private static final int TOGGLE_Y = 10;
-    private static final int TOGGLE_MARGIN = 10;
-    private static final int GEAR_SIZE = 20;
-    private static final int GEAR_GAP = 4;
-    private static final int TOGGLE_W = 42;
-    private static final int TOGGLE_H = 20;
-    private static final int STATUS_X = 10;
-    private static final int STATUS_Y = 60;
-    private static final int BUTTON_SIZE = 22;
-    private static final int TIGHT_WIDTH = BUTTON_SIZE;
-    private static final int BUTTON_GAP = 2;
-    private static final int BUTTON_BG = 0x80222631;
-    private static final int BUTTON_HOVERED = 0xA0444B5C;
-    private static final int BUTTON_SELECTED = 0xB02E6042;
-    private static final int BUTTON_DISABLED = 0x50222631;
-    private static final int OUTLINE = 0x50FFFFFF;
-    private static final int OUTLINE_HOVERED = 0x90FFFFFF;
-    private static final int OUTLINE_SELECTED = 0xFF2BEA68;
-    private static final int PATH_COLOR = 0xE8FFE66A;
-    private static final int FIRE_ZONE_COLOR = 0xE8FF665A;
-    private static final int SIEGE_ZONE_COLOR = 0xE8FFA83A;
-    private static final int SELECTED_COLOR = 0xFFFFFFFF;
-    private static final int MARKER_SELECTED_COLOR = 0xFF4FA3FF;
-    private static final int HUD_ICON_SIZE = 21;
-    private static final int TEXTURE_ICON_SIZE = 21;
-    private static final int ORDER_PREVIEW_LIMIT = 60;
-    private static final int MARKER_ICON = 21;
-    private static final double OBJECT_ICON_FLOOR = 3.5D;
-    private static final double MARKER_ICON_FLOOR = 5.0D;
-    private static final double MARKER_LIFT_MIN = 6.0D;
-    private static final double MARKER_HIT_MIN = 7.0D;
-
-    private static final double PICK_REACH = 6.0D;
-    private static final long DOUBLE_CLICK_MILLIS = 350L;
-    private static final int[][] OUTLINE_OFFSETS = {{0, -1}, {0, 1}, {-1, 0}, {1, 0}};
-    private static final double UNIT_DOT_MIN_ZOOM = 0.60D;
-    private static final double MAX_ZONE_RADIUS = CommandLimits.MAX_FIRE_RADIUS;
-    private static final double ZONE_DRAG_SLOP = 3.0D;
-    private static final int BUTTON_FORMATION = 0;
-    private static final int BUTTON_FIRE_ZONE = 1;
-    private static final int BUTTON_HALT = 2;
-    private static final int BUTTON_CEASE_FIRE = 3;
-    private static final int BUTTON_FIRE_AT_WILL = 4;
-    private static final int BUTTON_FACE = 5;
-    private static final int BUTTON_PICK = 6;
-    private static final int BUTTON_AGGRO = 7;
-    private static final int BUTTON_SHIELDS = 8;
-    private static final int BAR_BUTTONS = 9;
-    private static final int[] FORMATION_CYCLE = {7, 4, 2, 5, 1, 3, 6, 8, 0};
-
-    private static final ResourceLocation ICON_FORMATION_NONE = recruitsIcon("textures/gui/image/none.png");
-    private static final ResourceLocation ICON_FORMATION_LINE = recruitsIcon("textures/gui/image/line.png");
-    private static final ResourceLocation ICON_FORMATION_SQUARE = recruitsIcon("textures/gui/image/square.png");
-    private static final ResourceLocation ICON_FORMATION_TRIANGLE = recruitsIcon("textures/gui/image/triangle.png");
-    private static final ResourceLocation ICON_FORMATION_HCIRCLE = recruitsIcon("textures/gui/image/hcircle.png");
-    private static final ResourceLocation ICON_FORMATION_HSQUARE = recruitsIcon("textures/gui/image/hsquare.png");
-    private static final ResourceLocation ICON_FORMATION_VFORM = recruitsIcon("textures/gui/image/vform.png");
-    private static final ResourceLocation ICON_FORMATION_CIRCLE = recruitsIcon("textures/gui/image/circle.png");
-    private static final ResourceLocation ICON_FORMATION_MOVEMENT = recruitsIcon("textures/gui/image/movement.png");
-    private static final ResourceLocation ICON_FIRE_ZONE = recruitsIcon("textures/gui/image/group/3arrow.png");
-    private static final ResourceLocation ICON_FIRE_AT_WILL = recruitsIcon("textures/gui/image/group/bow.png");
-    private static final ResourceLocation ICON_FACE = recruitsIcon("textures/gui/image/group/arrow.png");
-    private static final ResourceLocation ICON_PICK = recruitsIcon("textures/gui/image/group/spyglass.png");
-    private static final int ENEMY_MENU_LINE = 9;
-    private static final int ENEMY_MENU_ROW = 13;
-    private static final int ENEMY_MENU_HINT_LINES = 2;
-    private static final int ENEMY_MENU_HEAD = 26;
-    private static final int ENEMY_MENU_PAD = 8;
-    private static final int OBJECT_ROUTE_COLOR = 0xA07FB2C8;
-
-    private static final int ENEMY_MENU_MAX_WIDTH = 240;
-    private static final int ENEMY_MENU_MIN_WIDTH = 150;
-    private static final float ENEMY_MENU_Z = 450.0F;
-    private static final int MENU_BACK = 0xD0000000;
-    private static final int MENU_EDGE = 0xFFFFFFFF;
-    private static final int MENU_RULE = 0x66FFFFFF;
-    private static final int MENU_ROW_HOVERED = 0x33FFFFFF;
-    private static final int MENU_LABEL = 0xFFB8B8B8;
-    private static final int MENU_VALUE = 0xFFFFFFFF;
-    private static final int MENU_TEXT_OFF = 0xFF777777;
-    private static final ResourceLocation ICON_CEASE_FIRE = recruitsIcon("textures/gui/image/none.png");
-    private static final ResourceLocation ICON_AGGRO_NEUTRAL = recruitsIcon("textures/gui/image/neutral.png");
-    private static final ResourceLocation ICON_AGGRO_AGGRESSIVE = recruitsIcon("textures/gui/image/enemy.png");
-    private static final ResourceLocation ICON_AGGRO_RAID = recruitsIcon("textures/gui/image/group/axe.png");
-    private static final ResourceLocation ICON_AGGRO_PASSIVE = recruitsIcon("textures/gui/image/ally.png");
-    private static final ResourceLocation ICON_SHIELDS = recruitsIcon("textures/gui/image/group/shield.png");
-    private static final ResourceLocation ICON_HOLD = ownIcon("textures/gui/hold_position.png");
-    private static final ResourceLocation ICON_INFANTRY = recruitsIcon("textures/gui/image/group/sword.png");
-    private static final ResourceLocation ICON_RANGED = recruitsIcon("textures/gui/image/group/bow.png");
-    private static final ResourceLocation ICON_CAVALRY = recruitsIcon("textures/gui/image/group/horse.png");
-
     private WorldMapView view;
+    private final MapCommandUnitLayer units = new MapCommandUnitLayer(this::relationColor);
     private final MapCameraMotion cameraMotion = new MapCameraMotion();
     private boolean selectingSquads;
     private boolean showControls;
@@ -152,7 +59,6 @@ public final class WorldMapCommandOverlay implements WorldMapOverlay {
     private boolean movingZoneDragged;
     private boolean formationOpen;
     private boolean aggroOpen;
-    private SquadClusters.Cluster hoveredCluster;
     private final List<TypeSegment> typeSegments = new ArrayList<>();
     private SquadClusters.Cluster enemyMenuTarget;
     private MapObjectSnapshot objectMenuTarget;
@@ -160,8 +66,6 @@ public final class WorldMapCommandOverlay implements WorldMapOverlay {
     private PendingObjectOrder pendingObjectOrder;
     private double enemyMenuX;
     private double enemyMenuY;
-    private List<SquadClusters.Cluster> clusters = List.of();
-    private final SquadClusters.Cache clusterCache = new SquadClusters.Cache();
     private long lastBannerClickMillis;
     private UUID lastBannerClicked;
     private double zoneCenterX;
@@ -179,6 +83,7 @@ public final class WorldMapCommandOverlay implements WorldMapOverlay {
 
     public void reset() {
         view = null;
+        units.reset();
         cameraMotion.reset();
         selectingSquads = false;
         showControls = false;
@@ -188,14 +93,11 @@ public final class WorldMapCommandOverlay implements WorldMapOverlay {
         movingZoneDragged = false;
         formationOpen = false;
         aggroOpen = false;
-        hoveredCluster = null;
         typeSegments.clear();
         enemyMenuTarget = null;
         objectMenuTarget = null;
         pendingObjectOrder = null;
         enemyMenuX = enemyMenuY = 0.0D;
-        clusters = List.of();
-        clusterCache.clear();
         lastBannerClickMillis = 0L;
         lastBannerClicked = null;
         zoneCenterX = zoneCenterY = zoneEdgeX = zoneEdgeY = 0.0D;
@@ -206,6 +108,7 @@ public final class WorldMapCommandOverlay implements WorldMapOverlay {
     @Override
     public void renderMap(GuiGraphics graphics, int mouseX, int mouseY, float partialTicks, WorldMapView view) {
         this.view = view;
+        units.setView(view);
         if (!MapCommandClientState.isCommandModeEnabled()) {
             cameraMotion.reset();
             return;
@@ -216,8 +119,8 @@ public final class WorldMapCommandOverlay implements WorldMapOverlay {
 
         List<CommandGroupSnapshot> snapshots = MapCommandClientState.snapshotsForDimension(minecraft.level);
         Set<UUID> selectedIds = selectedIds(minecraft.level);
-        clusters = clusterCache.update(MapCommandClientState.snapshotRevision(), snapshots);
-        SquadClusters.Cluster hovered = findClusterAtScreen(mouseX, mouseY);
+        units.refreshClusters(snapshots);
+        SquadClusters.Cluster hovered = units.findClusterAtScreen(mouseX, mouseY);
 
         renderRoutes(graphics);
         renderObjectRoutes(graphics);
@@ -225,11 +128,11 @@ public final class WorldMapCommandOverlay implements WorldMapOverlay {
         renderObjects(graphics, minecraft);
         renderObjectSelection(graphics);
         for (CommandGroupSnapshot snapshot : snapshots) {
-            renderUnitDots(graphics, snapshot, selectedIds.contains(snapshot.selectionId()));
+            units.renderUnitDots(graphics, snapshot, selectedIds.contains(snapshot.selectionId()));
         }
-        hoveredCluster = hovered;
-        for (SquadClusters.Cluster cluster : clusters) {
-            renderSquadMarker(graphics, cluster, commandedShare(cluster), hovered == cluster);
+        units.hoveredCluster = hovered;
+        for (SquadClusters.Cluster cluster : units.clusters) {
+            units.renderSquadMarker(graphics, cluster, commandedShare(cluster), hovered == cluster);
         }
         renderPickTarget(graphics, mouseX, mouseY);
         renderSelectionRectangle(graphics);
@@ -242,6 +145,7 @@ public final class WorldMapCommandOverlay implements WorldMapOverlay {
     @Override
     public void renderUi(GuiGraphics graphics, int mouseX, int mouseY, float partialTicks, WorldMapView view) {
         this.view = view;
+        units.setView(view);
         Font font = Minecraft.getInstance().font;
         boolean available = MapCommandNetworkClient.available();
         boolean enabled = MapCommandClientState.isCommandModeEnabled();
@@ -267,6 +171,7 @@ public final class WorldMapCommandOverlay implements WorldMapOverlay {
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button, WorldMapView view) {
         this.view = view;
+        units.setView(view);
         if (isOver(mouseX, mouseY, toggleLeft(), TOGGLE_Y, TOGGLE_W, TOGGLE_H)) {
             if (MapCommandNetworkClient.available()) {
                 MapCommandClientState.toggleCommandMode();
@@ -337,7 +242,7 @@ public final class WorldMapCommandOverlay implements WorldMapOverlay {
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.level == null || minecraft.player == null) return true;
 
-        SquadClusters.Cluster hit = findClusterAtScreen(mouseX, mouseY);
+        SquadClusters.Cluster hit = units.findClusterAtScreen(mouseX, mouseY);
         List<CommandGroupSnapshot> selected = MapCommandClientState.selectedForDimensionSnapshots(minecraft.level);
         UUID localPlayerId = minecraft.player.getUUID();
 
@@ -518,6 +423,7 @@ public final class WorldMapCommandOverlay implements WorldMapOverlay {
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY, WorldMapView view) {
         this.view = view;
+        units.setView(view);
         if (button == 1 && movingZone != null) {
             double wantX = mouseX - movingGrabX;
             double wantY = mouseY - movingGrabY;
@@ -548,6 +454,7 @@ public final class WorldMapCommandOverlay implements WorldMapOverlay {
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button, WorldMapView view) {
         this.view = view;
+        units.setView(view);
         if (button == 1 && movingZone != null) {
             MapCommandClientState.FireZone zone = movingZone;
             boolean dragged = movingZoneDragged;
@@ -583,6 +490,7 @@ public final class WorldMapCommandOverlay implements WorldMapOverlay {
     @Override
     public boolean isMouseBlockingMap(double mouseX, double mouseY, WorldMapView view) {
         this.view = view;
+        units.setView(view);
         return selectingSquads
                 || isOver(mouseX, mouseY, toggleLeft(), TOGGLE_Y, TOGGLE_W, TOGGLE_H)
                 || (MapCommandClientState.isCommandModeEnabled()
@@ -594,6 +502,7 @@ public final class WorldMapCommandOverlay implements WorldMapOverlay {
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers, WorldMapView view) {
         this.view = view;
+        units.setView(view);
         if (!MapCommandClientState.isCommandModeEnabled()) return false;
 
         Minecraft minecraft = Minecraft.getInstance();
@@ -798,7 +707,7 @@ public final class WorldMapCommandOverlay implements WorldMapOverlay {
             double size = objectIconSize(object);
             double left = worldToScreenX(object.position().getX()) - size / 2.0D;
             double top = worldToScreenY(object.position().getZ()) - size / 2.0D;
-            drawRect(graphics, left - 2.0D, top - 2.0D, left + size + 2.0D, top + size + 2.0D,
+            MapRenderUtil.outline(graphics, left - 2.0D, top - 2.0D, left + size + 2.0D, top + size + 2.0D,
                     MARKER_SELECTED_COLOR);
         }
     }
@@ -869,7 +778,7 @@ public final class WorldMapCommandOverlay implements WorldMapOverlay {
     }
 
     private double objectIconSize(MapObjectSnapshot object) {
-        double base = Math.max(OBJECT_ICON_FLOOR, markerIconSize() * 0.6D);
+        double base = Math.max(OBJECT_ICON_FLOOR, units.markerIconSize() * 0.6D);
         return base * Math.max(0.25F, object.icon().scale());
     }
 
@@ -884,7 +793,7 @@ public final class WorldMapCommandOverlay implements WorldMapOverlay {
         if (icon.smooth()) {
             Minecraft.getInstance().getTextureManager().getTexture(icon.texture()).setFilter(true, false);
         }
-        drawBanner(graphics, icon.texture(), left, top, size);
+        units.drawBanner(graphics, icon.texture(), left, top, size);
     }
 
     private void drawItemIcon(GuiGraphics graphics, me.mss1r.recruitsrtscommand.api.MapIcon icon,
@@ -910,246 +819,9 @@ public final class WorldMapCommandOverlay implements WorldMapOverlay {
                 0xC0101418);
         MapRenderUtil.fill(graphics, left, top, left + width, top + height, 0xFF3A2018);
         MapRenderUtil.fill(graphics, left, top, left + width * (object.condition() / 100.0D), top + height,
-                healthColor(object.condition()));
+                units.healthColor(object.condition()));
     }
 
-    private void renderSquadMarker(GuiGraphics graphics, SquadClusters.Cluster cluster, boolean selected, boolean hovered) {
-        if (usesTacticalSymbols()) {
-            TacticalSymbolLayout layout = TacticalSymbolLayout.of(cluster.body(), view.scale());
-            double x = markerCenterX(cluster);
-            double y = worldToScreenY(cluster.centerZ());
-            TacticalSymbolRenderer.draw(graphics, layout, x, y, relationColor(cluster.ownerId()), selected, hovered);
-            if (layout.width() >= 12 || selected || hovered) {
-                double scale = Mth.clamp(layout.width() / 22, 0.65D, 1);
-                double countWidth = Minecraft.getInstance().font.width(strengthLabel(cluster)) * scale;
-                renderSquadStrength(graphics, cluster, x - countWidth / 2,
-                        y + layout.bottomExtent() + 3, scale);
-            }
-            return;
-        }
-        double centerX = markerCenterX(cluster);
-        double size = markerIconSize();
-        double top = markerTop(cluster);
-        int relation = relationColor(cluster.ownerId());
-
-        drawBanner(graphics, iconForSnapshot(cluster.snapshot()), centerX - size / 2.0D, top, size);
-
-        if (selected || hovered) {
-            drawRect(graphics, centerX - size / 2.0D - 2.0D, top - 2.0D,
-                    centerX + size / 2.0D + 2.0D, top + size + 2.0D,
-                    selected ? MARKER_SELECTED_COLOR : 0x90FFFFFF);
-        }
-
-        renderSquadHealth(graphics, cluster, centerX, top + size + 2.0D, size);
-        renderStanceMarks(graphics, cluster, centerX - size / 2.0D, top, size);
-        if (size >= MARKER_ICON) {
-            renderSquadStrength(graphics, cluster, centerX + size / 2.0D + 2.0D, top + size - 8.0D);
-        }
-    }
-
-    private void renderStanceMarks(GuiGraphics graphics, SquadClusters.Cluster cluster,
-                                   double left, double top, double size) {
-        if (size < MARKER_ICON_FLOOR + 2.0D) return;
-
-        double pip = Math.max(2.0D, size * 0.16D);
-        int aggro = cluster.aggro();
-        if (aggro == 1 || aggro == 2 || aggro == 3) {
-            MapRenderUtil.fill(graphics, left - 1.0D, top - 1.0D, left + pip + 1.0D, top + pip + 1.0D,
-                    0xC0101418);
-            MapRenderUtil.fill(graphics, left, top, left + pip, top + pip, aggroPipColor(aggro));
-        }
-        if (cluster.shields()) {
-            double right = left + size;
-            MapRenderUtil.fill(graphics, right - pip - 1.0D, top - 1.0D, right + 1.0D, top + pip + 1.0D,
-                    0xC0101418);
-            MapRenderUtil.fill(graphics, right - pip, top, right, top + pip, 0xFFBFC6D2);
-        }
-    }
-
-    private int aggroPipColor(int aggro) {
-        return switch (aggro) {
-            case 1 -> 0xFFE05A4A;
-            case 2 -> 0xFFE09A3A;
-            default -> 0xFF5AA0E0;
-        };
-    }
-
-    private void drawBanner(GuiGraphics graphics, ResourceLocation icon, double left, double top, double size) {
-        float scale = (float) (size / MARKER_ICON);
-        graphics.flush();
-        RenderSystem.enableBlend();
-        graphics.pose().pushPose();
-        graphics.pose().translate(left, top, 0.0D);
-        graphics.pose().scale(scale, scale, 1.0F);
-
-        graphics.setColor(0.05F, 0.07F, 0.09F, 1.0F);
-        for (int[] offset : OUTLINE_OFFSETS) {
-            graphics.blit(icon, offset[0], offset[1], 0.0F, 0.0F,
-                    MARKER_ICON, MARKER_ICON, MARKER_ICON, MARKER_ICON);
-        }
-        graphics.setColor(1.0F, 1.0F, 1.0F, 1.0F);
-        graphics.blit(icon, 0, 0, 0.0F, 0.0F, MARKER_ICON, MARKER_ICON, MARKER_ICON, MARKER_ICON);
-
-        graphics.pose().popPose();
-        graphics.flush();
-    }
-
-    private void renderSquadHealth(GuiGraphics graphics, SquadClusters.Cluster cluster,
-                                   double centerX, double top, double size) {
-        int health = cluster.health();
-        if (health < 0) return;
-
-        double width = size * 0.8D;
-        double left = centerX - width / 2.0D;
-        double height = Math.max(2.0D, size / 10.0D);
-        MapRenderUtil.fill(graphics, left - 1.0D, top + 1.0D, left + width + 1.0D, top + height + 2.0D, 0xD0101418);
-
-        double filled = width * Mth.clamp(health, 0, 100) / 100.0D;
-        if (filled >= 1.0D) {
-            MapRenderUtil.fill(graphics, left, top + 1.5D, left + filled, top + height + 1.0D, healthColor(health));
-        }
-    }
-
-    private int healthColor(int health) {
-        double share = Mth.clamp(health, 0, 100) / 100.0D;
-        int red;
-        int green;
-        if (share > 0.5D) {
-            double t = (share - 0.5D) * 2.0D;
-            red = (int) Math.round(230 - (230 - 60) * t);
-            green = (int) Math.round(190 + (220 - 190) * t);
-        } else {
-            double t = share * 2.0D;
-            red = 230;
-            green = (int) Math.round(60 + (190 - 60) * t);
-        }
-        return 0xFF000000 | (red << 16) | (green << 8) | 70;
-    }
-
-    private void renderSquadStrength(GuiGraphics graphics, SquadClusters.Cluster cluster, double x, double y) {
-        renderSquadStrength(graphics, cluster, x, y, 1.0D);
-    }
-
-    private String strengthLabel(SquadClusters.Cluster cluster) {
-        return cluster.whole() ? String.valueOf(cluster.strength())
-                : cluster.strength() + "/" + cluster.snapshot().totalUnits();
-    }
-
-    private void renderSquadStrength(GuiGraphics graphics, SquadClusters.Cluster cluster, double x, double y, double scale) {
-        Font font = Minecraft.getInstance().font;
-        String strength = strengthLabel(cluster);
-        int width = font.width(strength);
-
-        graphics.pose().pushPose();
-        graphics.pose().translate(x, y, 0.0D);
-        graphics.pose().scale((float) scale, (float) scale, 1.0F);
-        graphics.fill(-1, -1, width + 1, 9, 0xE010141B);
-        graphics.drawString(font, strength, 0, 0, 0xFFF2D98C, false);
-        graphics.pose().popPose();
-    }
-
-    private double markerIconSize() {
-        return Mth.clamp(view.scale() * MARKER_ICON * 0.5D, MARKER_ICON_FLOOR, MARKER_ICON);
-    }
-
-    private double markerCenterX(SquadClusters.Cluster cluster) {
-        return worldToScreenX(cluster.centerX());
-    }
-
-    private double markerTop(SquadClusters.Cluster cluster) {
-        double size = markerIconSize();
-        double reach = view.scale() < UNIT_DOT_MIN_ZOOM ? 0.0D : cluster.reachNorth() * view.scale();
-        return worldToScreenY(cluster.centerZ()) - Math.max(MARKER_LIFT_MIN, reach) - size - 2.0D;
-    }
-
-    private double smoothX(UUID id, double fallback) {
-        return MapPositionSmoothing.x(id, fallback);
-    }
-
-    private double smoothZ(UUID id, double fallback) {
-        return MapPositionSmoothing.z(id, fallback);
-    }
-
-    private String squadTooltip(SquadClusters.Cluster cluster) {
-        CommandGroupSnapshot snapshot = cluster.snapshot();
-        int men = cluster.strength();
-        StringBuilder text = new StringBuilder(squadName(snapshot))
-                .append("   ")
-                .append(I18n.get(men == 1 ? "gui.recruitsrtscommand.status.man" : "gui.recruitsrtscommand.status.men", men));
-
-        if (!cluster.whole()) {
-            text.append("   ").append(I18n.get("gui.recruitsrtscommand.status.detached",
-                    cluster.snapshot().totalUnits()));
-        }
-
-        int health = cluster.health();
-        if (health >= 0 && health < 100) {
-            text.append("   ").append(I18n.get("gui.recruitsrtscommand.status.health", health));
-        }
-        appendGroupState(text, ClientManager.groupMoveState, snapshot.selectionId());
-        appendGroupState(text, ClientManager.groupAggroState, snapshot.selectionId());
-        return text.toString();
-    }
-
-    private String squadName(CommandGroupSnapshot snapshot) {
-        String name = ClientGroups.nameOf(snapshot.selectionId());
-        return abbreviate(name == null ? I18n.get("gui.recruitsrtscommand.status.unnamed") : name, 22);
-    }
-
-    private void appendGroupState(StringBuilder text, Map<UUID, Component> states, UUID groupId) {
-        if (states == null || groupId == null) return;
-        Component state = states.get(groupId);
-        if (state == null) return;
-        String line = state.getString();
-        if (line.isBlank()) return;
-        text.append("   ").append(abbreviate(line, 22));
-    }
-
-    private void renderUnitDots(GuiGraphics graphics, CommandGroupSnapshot snapshot, boolean selected) {
-        if (snapshot.units() == null || snapshot.units().isEmpty()) return;
-        if (usesTacticalSymbols()) return;
-        if (!selected && view.scale() < UNIT_DOT_MIN_ZOOM
-                && MapCommandClientState.activeTool() != MapCommandTool.PICK) return;
-
-        int relation = relationColor(snapshot.ownerId());
-        Minecraft minecraft = Minecraft.getInstance();
-        boolean ours = minecraft.player != null && minecraft.player.getUUID().equals(snapshot.ownerId());
-        boolean anySelected = ours && MapCommandClientState.hasSelection();
-        double radius = Mth.clamp(view.scale() * 1.0D, 0.9D, 1.7D);
-        for (CommandUnitSnapshot unit : snapshot.units()) {
-            drawDot(graphics, worldToScreenX(smoothX(unit.unitId(), unit.position().getX())),
-                    worldToScreenY(smoothZ(unit.unitId(), unit.position().getZ())),
-                    radius + 0.7D, 0xC8101418);
-        }
-
-        for (CommandUnitSnapshot unit : snapshot.units()) {
-            boolean commanded = !anySelected || MapCommandClientState.isUnitSelected(unit.unitId());
-            int color = relation;
-            drawDot(graphics, worldToScreenX(smoothX(unit.unitId(), unit.position().getX())),
-                    worldToScreenY(smoothZ(unit.unitId(), unit.position().getZ())),
-                    radius, commanded ? color : dimmed(color));
-        }
-    }
-
-    private int dimmed(int color) {
-        int alpha = (color >>> 24) & 0xFF;
-        int red = (color >>> 16) & 0xFF;
-        int green = (color >>> 8) & 0xFF;
-        int blue = color & 0xFF;
-        int grey = (red + green + blue) / 3;
-        red = (int) (grey * 0.45D + red * 0.15D);
-        green = (int) (grey * 0.45D + green * 0.15D);
-        blue = (int) (grey * 0.45D + blue * 0.15D);
-        return (alpha << 24) | (red << 16) | (green << 8) | blue;
-    }
-
-    private void drawDot(GuiGraphics graphics, double centerX, double centerY, double radius, int color) {
-        double inset = radius * 0.42D;
-        MapRenderUtil.fill(graphics, centerX - radius + inset, centerY - radius,
-                centerX + radius - inset, centerY + radius, color);
-        MapRenderUtil.fill(graphics, centerX - radius, centerY - radius + inset,
-                centerX + radius, centerY + radius - inset, color);
-    }
 
     private void renderRoutes(GuiGraphics graphics) {
         for (CommandOrderRoute route : MapCommandClientState.routes(Minecraft.getInstance().level)) {
@@ -1216,9 +888,9 @@ public final class WorldMapCommandOverlay implements WorldMapOverlay {
             MapRenderUtil.fill(graphics, centerX - radiusX, centerY - radiusZ,
                     centerX + radiusX, centerY + radiusZ, ground);
             if (selected) drawZoneHatching(graphics, centerX, centerY, radiusX, radiusZ, shape);
-            drawRect(graphics, centerX - radiusX - 1.0D, centerY - radiusZ - 1.0D,
+            MapRenderUtil.outline(graphics, centerX - radiusX - 1.0D, centerY - radiusZ - 1.0D,
                     centerX + radiusX + 1.0D, centerY + radiusZ + 1.0D, shadow);
-            drawRect(graphics, centerX - radiusX, centerY - radiusZ,
+            MapRenderUtil.outline(graphics, centerX - radiusX, centerY - radiusZ,
                     centerX + radiusX, centerY + radiusZ, rim);
         } else {
             drawDisc(graphics, centerX, centerY, radiusX, radiusZ, ground);
@@ -1294,12 +966,6 @@ public final class WorldMapCommandOverlay implements WorldMapOverlay {
         }
     }
 
-    private void drawRect(GuiGraphics graphics, double left, double top, double right, double bottom, int color) {
-        MapRenderUtil.fill(graphics, left, top, right, top + 1.0D, color);
-        MapRenderUtil.fill(graphics, left, bottom - 1.0D, right, bottom, color);
-        MapRenderUtil.fill(graphics, left, top, left + 1.0D, bottom, color);
-        MapRenderUtil.fill(graphics, right - 1.0D, top, right, bottom, color);
-    }
 
     private void drawDisc(GuiGraphics graphics, double centerX, double centerY,
                           double radiusX, double radiusZ, int color) {
@@ -1421,9 +1087,9 @@ public final class WorldMapCommandOverlay implements WorldMapOverlay {
         if (label == null && typeSegmentAt(mouseX, mouseY) != null) {
             label = I18n.get("gui.recruitsrtscommand.status.only_kind");
         }
-        if (label == null && hoveredCluster != null && enemyMenuTarget == null
+        if (label == null && units.hoveredCluster != null && enemyMenuTarget == null
                 && objectMenuTarget == null) {
-            label = squadTooltip(hoveredCluster);
+            label = units.squadTooltip(units.hoveredCluster);
         }
         if (label != null) {
             drawTooltip(graphics, font, mouseX, mouseY, label);
@@ -1707,7 +1373,7 @@ public final class WorldMapCommandOverlay implements WorldMapOverlay {
                 : anyMen ? null : I18n.get("gui.recruitsrtscommand.enemy.no_men");
         return new EnemyMenu(
                 Minecraft.getInstance().font,
-                squadName(enemyMenuTarget.snapshot()) + "   " + enemyMenuTarget.strength(),
+                units.squadName(enemyMenuTarget.snapshot()) + "   " + enemyMenuTarget.strength(),
                 new String[]{I18n.get("gui.recruitsrtscommand.enemy.attack")},
                 new String[]{I18n.get("gui.recruitsrtscommand.enemy.attack.hint")},
                 new boolean[]{anyMen && allowed},
@@ -2143,23 +1809,6 @@ public final class WorldMapCommandOverlay implements WorldMapOverlay {
         graphics.drawString(font, text, x + 4, y + 4, 0xFFFFFF, false);
     }
 
-    private SquadClusters.Cluster findClusterAtScreen(double mouseX, double mouseY) {
-        double size = markerIconSize();
-        double reach = Math.max(MARKER_HIT_MIN, size / 2.0D + 2.0D);
-        for (int i = clusters.size() - 1; i >= 0; i--) {
-            SquadClusters.Cluster cluster = clusters.get(i);
-            double x = markerCenterX(cluster);
-            if (usesTacticalSymbols()) {
-                double y = worldToScreenY(cluster.centerZ());
-                if (TacticalSymbolLayout.of(cluster.body(), view.scale()).contains(mouseX - x, mouseY - y, 2)) return cluster;
-                continue;
-            }
-            double y = markerTop(cluster) + size / 2.0D;
-            if (Math.abs(mouseX - x) <= reach && Math.abs(mouseY - y) <= reach) return cluster;
-        }
-        return null;
-    }
-
     private void selectFromBanner(SquadClusters.Cluster cluster) {
         long now = System.currentTimeMillis();
         boolean again = cluster.selectionId().equals(lastBannerClicked)
@@ -2195,8 +1844,8 @@ public final class WorldMapCommandOverlay implements WorldMapOverlay {
         for (CommandGroupSnapshot snapshot : MapCommandClientState.snapshotsForDimension(minecraft.level)) {
             for (CommandUnitSnapshot unit : snapshot.units()) {
                 if (!unit.unitId().equals(target)) continue;
-                double x = worldToScreenX(smoothX(unit.unitId(), unit.position().getX()));
-                double y = worldToScreenY(smoothZ(unit.unitId(), unit.position().getZ()));
+                double x = worldToScreenX(units.smoothX(unit.unitId(), unit.position().getX()));
+                double y = worldToScreenY(units.smoothZ(unit.unitId(), unit.position().getZ()));
                 boolean held = MapCommandClientState.isUnitSelected(target);
                 drawDiamondOutline(graphics, x, y, 5.0D, 1.8D, 0xC0101418);
                 drawDiamondOutline(graphics, x, y, 4.2D, 1.0D, held ? 0xFFFF6E5A : SELECTED_COLOR);
@@ -2214,8 +1863,8 @@ public final class WorldMapCommandOverlay implements WorldMapOverlay {
         for (CommandGroupSnapshot snapshot : MapCommandClientState.snapshotsForDimension(minecraft.level)) {
             if (!localPlayerId.equals(snapshot.ownerId())) continue;
             for (CommandUnitSnapshot unit : snapshot.units()) {
-                double x = worldToScreenX(smoothX(unit.unitId(), unit.position().getX()));
-                double y = worldToScreenY(smoothZ(unit.unitId(), unit.position().getZ()));
+                double x = worldToScreenX(units.smoothX(unit.unitId(), unit.position().getX()));
+                double y = worldToScreenY(units.smoothZ(unit.unitId(), unit.position().getZ()));
                 double distanceSqr = (mouseX - x) * (mouseX - x) + (mouseY - y) * (mouseY - y);
                 if (distanceSqr <= nearestDistanceSqr) {
                     nearestDistanceSqr = distanceSqr;
@@ -2301,8 +1950,8 @@ public final class WorldMapCommandOverlay implements WorldMapOverlay {
         double bottom = Math.max(selectionStartY, selectionCurrentY);
         List<UUID> boxed = new ArrayList<>();
         UUID localPlayerId = minecraft.player.getUUID();
-        if (usesTacticalSymbols()) {
-            for (SquadClusters.Cluster cluster : clusters) {
+        if (units.usesTacticalSymbols()) {
+            for (SquadClusters.Cluster cluster : units.clusters) {
                 if (!localPlayerId.equals(cluster.ownerId())) continue;
                 double x = worldToScreenX(cluster.centerX());
                 double y = worldToScreenY(cluster.centerZ());
@@ -2311,8 +1960,8 @@ public final class WorldMapCommandOverlay implements WorldMapOverlay {
         } else for (CommandGroupSnapshot snapshot : MapCommandClientState.snapshotsForDimension(minecraft.level)) {
             if (!localPlayerId.equals(snapshot.ownerId())) continue;
             for (CommandUnitSnapshot unit : snapshot.units()) {
-                double x = worldToScreenX(smoothX(unit.unitId(), unit.position().getX()));
-                double y = worldToScreenY(smoothZ(unit.unitId(), unit.position().getZ()));
+                double x = worldToScreenX(units.smoothX(unit.unitId(), unit.position().getX()));
+                double y = worldToScreenY(units.smoothZ(unit.unitId(), unit.position().getZ()));
                 if (x >= left && x <= right && y >= top && y <= bottom) {
                     boxed.add(unit.unitId());
                 }
@@ -2457,18 +2106,6 @@ public final class WorldMapCommandOverlay implements WorldMapOverlay {
         return I18n.get(key);
     }
 
-    private ResourceLocation iconForSnapshot(CommandGroupSnapshot snapshot) {
-        ResourceLocation chosen = ClientGroups.imageOf(snapshot.selectionId());
-        if (chosen != null) return chosen;
-
-        int infantry = snapshot.countOf(CommandUnitType.INFANTRY);
-        int ranged = snapshot.countOf(CommandUnitType.RANGED);
-        int cavalry = snapshot.countOf(CommandUnitType.CAVALRY);
-        if (cavalry > 0 && cavalry >= infantry && cavalry >= ranged) return ICON_CAVALRY;
-        if (ranged > 0 && ranged >= infantry) return ICON_RANGED;
-        return ICON_INFANTRY;
-    }
-
     private int relationColor(UUID ownerId) {
         Minecraft minecraft = Minecraft.getInstance();
         UUID localPlayerId = minecraft.player == null ? null : minecraft.player.getUUID();
@@ -2486,10 +2123,6 @@ public final class WorldMapCommandOverlay implements WorldMapOverlay {
         return NEUTRAL_COLOR;
     }
 
-    private boolean usesTacticalSymbols() {
-        return TacticalSymbolLayout.visible(view.scale(), MapCommandClientState.activeTool() == MapCommandTool.PICK);
-    }
-
     private RecruitsFaction findFactionForOwner(UUID ownerId) {
         if (ClientManager.factions == null) return null;
         for (RecruitsFaction faction : ClientManager.factions) {
@@ -2503,14 +2136,6 @@ public final class WorldMapCommandOverlay implements WorldMapOverlay {
     private boolean isKeyDown(int keyCode) {
         Minecraft minecraft = Minecraft.getInstance();
         return GLFW.glfwGetKey(minecraft.getWindow().getWindow(), keyCode) == GLFW.GLFW_PRESS;
-    }
-
-    private static ResourceLocation recruitsIcon(String path) {
-        return ResourceLocation.fromNamespaceAndPath("recruits", path);
-    }
-
-    private static ResourceLocation ownIcon(String path) {
-        return ResourceLocation.fromNamespaceAndPath("recruitsrtscommand", path);
     }
 
     private static String abbreviate(String value, int maxLength) {
