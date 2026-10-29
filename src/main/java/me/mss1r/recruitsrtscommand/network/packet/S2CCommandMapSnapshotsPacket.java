@@ -4,6 +4,7 @@ import me.mss1r.recruitsrtscommand.client.command.ClientCommandPacketHandler;
 import me.mss1r.recruitsrtscommand.common.command.CommandGroupSnapshot;
 import me.mss1r.recruitsrtscommand.common.command.CommandLimits;
 import me.mss1r.recruitsrtscommand.common.command.CommandOrderRoute;
+import me.mss1r.recruitsrtscommand.common.command.CommandOrderStatus;
 import me.mss1r.recruitsrtscommand.api.MapObjectSnapshot;
 import me.mss1r.recruitsrtscommand.common.command.CommandUnitSnapshot;
 import me.mss1r.recruitsrtscommand.common.command.CommandUnitType;
@@ -59,7 +60,8 @@ public record S2CCommandMapSnapshotsPacket(List<CommandGroupSnapshot> snapshots,
             int legs = CommandPacketCodecs.readCount(buf, CommandLimits.MAX_WAYPOINTS, "legs");
             List<BlockPos> waypoints = new ArrayList<>(legs);
             for (int j = 0; j < legs; j++) waypoints.add(buf.readBlockPos());
-            routes.add(new CommandOrderRoute(members, routeDimension, origin, waypoints));
+            CommandOrderStatus status = buf.readEnum(CommandOrderStatus.class);
+            routes.add(new CommandOrderRoute(members, routeDimension, origin, waypoints, status));
         }
         int objectCount = CommandPacketCodecs.readCount(buf, MAX_ENTRIES, "objectCount");
         List<MapObjectSnapshot> objects = new ArrayList<>(objectCount);
@@ -141,6 +143,7 @@ public record S2CCommandMapSnapshotsPacket(List<CommandGroupSnapshot> snapshots,
             if (route.origin() != null) buf.writeBlockPos(route.origin());
             CommandPacketCodecs.writeCount(buf, route.waypoints().size(), CommandLimits.MAX_WAYPOINTS, "route.waypoints().size()");
             for (BlockPos waypoint : route.waypoints()) buf.writeBlockPos(waypoint);
+            buf.writeEnum(route.status());
         }
 
         CommandPacketCodecs.writeCount(buf, packet.objects.size(), MAX_ENTRIES, "packet.objects.size()");

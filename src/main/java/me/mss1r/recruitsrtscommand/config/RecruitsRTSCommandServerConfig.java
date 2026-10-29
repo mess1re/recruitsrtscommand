@@ -20,8 +20,8 @@ public final class RecruitsRTSCommandServerConfig {
                 .comment("Maximum horizontal distance from the commander to a selected squad anchor for map-issued RTS orders.")
                 .defineInRange("commandRadiusBlocks", 512, 32, 4096);
         ARRIVAL_DISTANCE_BLOCKS = builder
-                .comment("How close the squad center must be to a queued waypoint before the next waypoint is issued.")
-                .defineInRange("arrivalDistanceBlocks", 5.0D, 1.0D, 32.0D);
+                .comment("Radius within which at least 80% of the squad must arrive before advancing a waypoint. Minimum 4 matches Recruits' movement tolerance.")
+                .defineInRange("arrivalDistanceBlocks", 5.0D, 4.0D, 32.0D);
         REPATH_INTERVAL_TICKS = builder
                 .comment("How often active map move orders are reissued while a squad is marching.")
                 .defineInRange("repathIntervalTicks", 80, 20, 400);

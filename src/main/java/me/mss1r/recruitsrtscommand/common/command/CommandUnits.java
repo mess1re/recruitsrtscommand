@@ -84,6 +84,12 @@ final class CommandUnits {
         return recruit instanceof IRangedRecruit || recruit instanceof NomadEntity;
     }
 
+    static double horizontalDistSqr(Vec3 a, Vec3 b) {
+        double dx = a.x - b.x;
+        double dz = a.z - b.z;
+        return dx * dx + dz * dz;
+    }
+
     static double horizontalDistSqr(BlockPos a, BlockPos b) {
         long dx = (long) a.getX() - b.getX();
         long dz = (long) a.getZ() - b.getZ();

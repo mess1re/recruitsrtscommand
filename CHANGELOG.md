@@ -9,6 +9,13 @@
 
 ### Fixed
 
+- Queued moves wait for 80% of the troops to reach each waypoint instead of using
+  the squad center. Stalled orders retry without resetting their progress timeout
+  and report a blocked route rather than disappearing silently.
+- Ranged attack positions preserve the intended distance from the target.
+- Pursuit checks current scouting visibility for squads and map objects even
+  while the map is closed, and stops when contact is lost.
+- Selected troops and squad tooltips show movement, pursuit and failure states.
 - Explicit move routes take priority over combat movement, including mounted
   charges and movement into formation. Combat behavior resumes after arrival or
   cancellation without changing the squad's aggression setting.
@@ -24,7 +31,7 @@
 
 ### Compatibility
 
-- Map snapshots now include unit headings (network protocol 3). Update both the
+- Map snapshots now include unit headings and order states (network protocol 4). Update both the
   server and clients together; the previous command protocol is not compatible.
 
 ### Internal

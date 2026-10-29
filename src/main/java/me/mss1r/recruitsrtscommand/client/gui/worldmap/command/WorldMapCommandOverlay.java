@@ -11,6 +11,7 @@ import me.mss1r.recruitsrtscommand.client.command.MapCommandTool;
 import me.mss1r.recruitsrtscommand.client.render.MapRenderUtil;
 import me.mss1r.recruitsrtscommand.common.command.CommandGroupSnapshot;
 import me.mss1r.recruitsrtscommand.common.command.CommandOrderRoute;
+import me.mss1r.recruitsrtscommand.common.command.CommandOrderStatus;
 import me.mss1r.recruitsrtscommand.api.MapObjectSnapshot;
 import me.mss1r.recruitsrtscommand.api.MapOrder;
 import me.mss1r.recruitsrtscommand.common.command.CommandUnitSnapshot;
@@ -422,7 +423,8 @@ public final class WorldMapCommandOverlay implements WorldMapOverlay {
             BlockPos origin = route.origin();
             if (origin == null) continue;
 
-            int color = selected ? PATH_COLOR : 0xA0D6CA62;
+            int color = route.status() == CommandOrderStatus.BLOCKED
+                    ? 0xFFE46058 : selected ? PATH_COLOR : 0xA0D6CA62;
             double previousX = worldToScreenX(origin.getX());
             double previousY = worldToScreenY(origin.getZ());
             for (int index = 0; index < waypoints.size(); index++) {

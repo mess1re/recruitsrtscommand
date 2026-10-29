@@ -456,7 +456,7 @@ public final class MapCommandClientState {
             if (!pending.route.dimension().equals(here)) continue;
             boolean covered = false;
             for (CommandOrderRoute known : ROUTES) {
-                if (!Collections.disjoint(known.members(), pending.route.members())) {
+                if (!known.status().terminal() && !Collections.disjoint(known.members(), pending.route.members())) {
                     covered = true;
                     break;
                 }

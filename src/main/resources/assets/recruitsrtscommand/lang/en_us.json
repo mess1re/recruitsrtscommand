@@ -78,5 +78,11 @@
   "gui.recruitsrtscommand.controls.tight.desc": "tight spacing",
   "gui.recruitsrtscommand.object.unnamed": "Unnamed",
   "gui.recruitsrtscommand.object.no_actions": "Nothing to be done with this",
-  "gui.recruitsrtscommand.object.point_at": "%s — right-click the place (left button or Esc calls it off)"
+  "gui.recruitsrtscommand.object.point_at": "%s — right-click the place (left button or Esc calls it off)",
+  "gui.recruitsrtscommand.order.moving": "Moving",
+  "gui.recruitsrtscommand.order.repathing": "Finding a route",
+  "gui.recruitsrtscommand.order.pursuing": "Pursuing",
+  "gui.recruitsrtscommand.order.arrived": "In position",
+  "gui.recruitsrtscommand.order.blocked": "Route blocked",
+  "gui.recruitsrtscommand.order.target_lost": "Target lost"
 }

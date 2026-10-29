@@ -22,8 +22,10 @@ import net.minecraft.util.Mth;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.ToIntFunction;
+import java.util.stream.Collectors;
 
 import static me.mss1r.recruitsrtscommand.client.gui.worldmap.command.MapCommandStyle.*;
 
@@ -242,6 +244,10 @@ final class MapCommandUnitLayer {
         }
         appendGroupState(text, ClientManager.groupMoveState, snapshot.selectionId());
         appendGroupState(text, ClientManager.groupAggroState, snapshot.selectionId());
+        Set<UUID> members = cluster.body().stream().map(CommandUnitSnapshot::unitId).collect(Collectors.toSet());
+        String orders = MapCommandOrderStatuses.describe(MapCommandClientState.routes(Minecraft.getInstance().level),
+                members::contains);
+        if (!orders.isEmpty()) text.append("   ").append(orders);
         return text.toString();
     }
 

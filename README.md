@@ -35,8 +35,15 @@ route holds up to 128 waypoints; further queued points are ignored until space i
 available. Fire-zone radii are limited to 48 blocks on both the client and server.
 
 Both sides need the same RTS Command protocol version for command controls.
-The tactical-symbol update includes unit headings in map snapshots and requires
+The update includes unit headings and order states in map snapshots (protocol 4) and requires
 updating the mod on both the server and clients.
+
+Queued moves advance after at least 80% of the troops reach a waypoint. The
+arrival radius defaults to 5 blocks, with a minimum of 4 to match Recruits'
+movement tolerance. Orders retry three times without progress and halt after
+45 seconds without approaching the destination. A blocked route stays visible
+in red for 20 seconds; selection status and squad tooltips explain the result.
+Pursuit stops when current scouting visibility no longer reveals its target.
 
 ## API
 

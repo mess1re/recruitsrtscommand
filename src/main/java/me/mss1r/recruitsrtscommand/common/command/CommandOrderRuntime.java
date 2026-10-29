@@ -29,12 +29,7 @@ import static me.mss1r.recruitsrtscommand.common.command.CommandUnits.*;
 import static me.mss1r.recruitsrtscommand.common.command.CommandCombat.*;
 
 final class CommandOrderRuntime {
-    private static final int ORDER_STALE_TIMEOUT_TICKS = 900;
-    private static final int ORDER_STALL_REISSUE_TICKS = 100;
-    private static final double MOVEMENT_EPSILON_SQR = 0.02D;
     private static final double FORMATION_SLOT_TOLERANCE = 2.5D;
-    private static final double FORMATION_ARRIVED_SHARE = 0.8D;
-    private static final int ORDER_STALL_REISSUE_LIMIT = 3;
     private static final int FORMATION_SETTLE_TICKS = 20;
     private static final int PURSUIT_REPATH_TICKS = 20;
     private static final double PURSUIT_CONTACT = 12.0D;
@@ -52,6 +47,7 @@ final class CommandOrderRuntime {
                 selection.memberIds(), selection.dimension());
         chase.pursuing = targetSquad;
         chase.pursuingObject = targetObject;
+        chase.status = CommandOrderStatus.PURSUING;
         orders.put(unusedOrderKey(selection.selectionId(), selection.dimension()), chase);
     }
 
@@ -71,7 +67,7 @@ final class CommandOrderRuntime {
 
         List<CommandOrderRoute> routes = new ArrayList<>();
         for (ActiveOrder order : orders.values()) {
-            if (!player.getUUID().equals(order.ownerId) || order.waypoints.isEmpty()) continue;
+            if (!player.getUUID().equals(order.ownerId)) continue;
 
             ServerLevel level = serverLevel(player.serverLevel().getServer(), order.dimension);
             List<AbstractRecruitEntity> walking = level == null
@@ -79,7 +75,7 @@ final class CommandOrderRuntime {
                     : resolveMembers(level, order.memberIds, order.ownerId);
             BlockPos origin = walking.isEmpty() ? null : BlockPos.containing(centerOf(walking));
             routes.add(new CommandOrderRoute(new ArrayList<>(order.memberIds), order.dimension,
-                    origin, order.waypoints.snapshot()));
+                    origin, order.waypoints.snapshot(), order.status));
         }
         return routes;
     }
@@ -136,7 +132,7 @@ final class CommandOrderRuntime {
             if (!player.getUUID().equals(current.ownerId)
                     || !selection.dimension().equals(entry.getKey().dimension)
                     || current.pursuing != null || current.pursuingObject != null
-                    || current.waypoints.isEmpty()) {
+                    || current.waypoints.isEmpty() || current.status.terminal()) {
                 continue;
             }
 
@@ -162,7 +158,7 @@ final class CommandOrderRuntime {
             ActiveOrder current = entry.getValue();
             if (!player.getUUID().equals(current.ownerId)
                     || !selection.dimension().equals(entry.getKey().dimension)
-                    || current.pursuing == null && current.pursuingObject == null) {
+                    || current.pursuing == null && current.pursuingObject == null && !current.status.terminal()) {
                 continue;
             }
             current.memberIds.removeAll(selection.memberIds());
@@ -185,7 +181,11 @@ final class CommandOrderRuntime {
         order.ownerId = ownerId;
         order.rootGroupId = rootGroupId;
         order.dimension = dimension;
-        order.formation = Mth.clamp(formation, 0, 8);
+        int nextFormation = Mth.clamp(formation, 0, 8);
+        if (order.formation != nextFormation || order.tight != tight || order.holdFormation != holdFormation) {
+            order.resetIssueState();
+        }
+        order.formation = nextFormation;
         order.tight = tight;
         order.holdFormation = holdFormation;
     }
@@ -198,7 +198,7 @@ final class CommandOrderRuntime {
         marching.clear();
         if (server == null || orders.isEmpty()) return;
 
-        double arrivalDistance = Math.max(1.0D, RecruitsRTSCommandServerConfig.ARRIVAL_DISTANCE_BLOCKS.get());
+        double arrivalDistance = Math.max(4.0D, RecruitsRTSCommandServerConfig.ARRIVAL_DISTANCE_BLOCKS.get());
         int repathInterval = Math.max(20, RecruitsRTSCommandServerConfig.REPATH_INTERVAL_TICKS.get());
         boolean continueInCombat = RecruitsRTSCommandServerConfig.CONTINUE_MOVE_IN_COMBAT.get();
 
@@ -216,55 +216,53 @@ final class CommandOrderRuntime {
 
         List<AbstractRecruitEntity> recruits = resolveMembers(level, order.memberIds, order.ownerId);
         if (recruits.isEmpty()) return true;
+        if (order.status.terminal()) return level.getGameTime() >= order.expiresAt;
 
         if (order.pursuing != null || order.pursuingObject != null) {
-            return tickPursuit(server, level, order, recruits);
+            return tickPursuit(owner, level, order, recruits);
         }
 
         if (order.waypoints.isEmpty()) return true;
-        if (!continueInCombat && recruits.stream().anyMatch(CommandUnits::isInCombat)) return true;
+        if (!continueInCombat && recruits.stream().anyMatch(CommandUnits::isInCombat)) {
+            for (AbstractRecruitEntity recruit : recruits) {
+                recruit.setShouldMovePos(false);
+                recruit.clearMovePos();
+            }
+            return true;
+        }
 
         BlockPos target = order.waypoints.peekFirst();
         if (target == null) return true;
 
-        double distanceSqr = distanceSqrToTarget(recruits, target);
-        Vec3 center = centerOf(recruits);
-        boolean moved = order.lastCenter == null || order.lastCenter.distanceToSqr(center) > MOVEMENT_EPSILON_SQR;
-        order.lastCenter = center;
-        if (moved) {
-            order.stagnantTicks = 0;
-            order.bestDistanceSqr = Math.min(order.bestDistanceSqr, distanceSqr);
-        } else if (distanceSqr + 1.0D < order.bestDistanceSqr) {
-            order.bestDistanceSqr = distanceSqr;
-            order.stagnantTicks = 0;
-        } else {
-            order.stagnantTicks++;
-        }
-        if (order.stagnantTicks > ORDER_STALE_TIMEOUT_TICKS) return true;
-
-        if (hasArrived(order, recruits, distanceSqr, arrivalDistance)) {
+        if (hasArrived(order, recruits, target, arrivalDistance)) {
             order.waypoints.pollFirst();
             order.resetIssueState();
             target = order.waypoints.peekFirst();
-            if (target == null) return true;
+            if (target == null) {
+                finishOrder(order, level, CommandOrderStatus.ARRIVED);
+                return false;
+            }
         }
 
         order.ticksSinceIssue++;
         BlockPos surface = FormationUtils.getPositionOrSurface(level, target);
         boolean newWaypoint = !order.commandIssued || !Objects.equals(order.issuedWaypoint, surface);
-        boolean stalled = order.stagnantTicks > ORDER_STALL_REISSUE_TICKS;
-        boolean dueForRepath = order.formation <= 0 && order.ticksSinceIssue >= repathInterval;
+        if (newWaypoint) issueMove(owner, level, recruits, order, surface, true);
 
-        if (stalled && ++order.stallReissues > ORDER_STALL_REISSUE_LIMIT) {
-            return true;
+        order.progress.update(meanRemainingDistance(order, recruits, surface));
+        if (order.progress.timedOut()) {
+            halt(recruits);
+            finishOrder(order, level, CommandOrderStatus.BLOCKED);
+            return false;
         }
-        if (newWaypoint || stalled || dueForRepath) {
-            issueMove(owner, level, recruits, order, surface, newWaypoint);
-            if (newWaypoint || stalled) {
-                order.stagnantTicks = 0;
-                order.bestDistanceSqr = distanceSqr;
-            }
+        boolean retry = order.progress.shouldRetry();
+        boolean dueForRepath = order.formation <= 0 && !order.progress.stalled()
+                && order.ticksSinceIssue >= repathInterval;
+        if (!newWaypoint && (retry || dueForRepath)) {
+            issueMove(owner, level, recruits, order, surface, false);
+            if (retry) order.progress.retried();
         }
+        order.status = order.progress.stalled() ? CommandOrderStatus.REPATHING : CommandOrderStatus.MOVING;
 
         for (AbstractRecruitEntity recruit : recruits) {
             marching.claim(recruit.getUUID(), order.ownerId, order.dimension);
@@ -273,29 +271,20 @@ final class CommandOrderRuntime {
         return false;
     }
 
-    private boolean tickPursuit(MinecraftServer server, ServerLevel level, ActiveOrder order,
+    private boolean tickPursuit(ServerPlayer owner, ServerLevel level, ActiveOrder order,
                                 List<AbstractRecruitEntity> recruits) {
-        List<LivingEntity> targets;
-        if (order.pursuingObject != null) {
-            targets = level.getEntity(order.pursuingObject) instanceof LivingEntity quarry
-                    && quarry.isAlive()
-                    ? List.of(quarry)
-                    : List.of();
-        } else {
-            ServerPlayer owner = server.getPlayerList().getPlayer(order.ownerId);
-            CommandSelection squad = owner == null ? null : snapshots.resolveSelection(owner, order.pursuing);
-            targets = squad == null ? List.of() : resolveLivingMembers(level, squad.memberIds());
-        }
-        if (targets.isEmpty()) {
-            for (AbstractRecruitEntity recruit : recruits) {
-                recruit.setShouldMovePos(false);
-            }
-            return true;
-        }
-
         order.ticksSinceIssue++;
         if (order.ticksSinceIssue < PURSUIT_REPATH_TICKS) return false;
         order.ticksSinceIssue = 0;
+
+        List<LivingEntity> targets = owner.serverLevel() == level
+                ? snapshots.visiblePursuitTargets(owner, order.pursuing, order.pursuingObject) : new ArrayList<>();
+        targets.removeIf(target -> !recruits.get(0).canAttack(target));
+        if (targets.isEmpty()) {
+            halt(recruits);
+            finishOrder(order, level, CommandOrderStatus.TARGET_LOST);
+            return false;
+        }
 
         Map<UUID, LivingEntity> assignment = assignTargets(recruits, targets);
         boolean anyShooters = false;
@@ -320,26 +309,23 @@ final class CommandOrderRuntime {
                     FormationUtils.getPositionOrSurface(level, victim.blockPosition()));
         }
 
-        return !anyFar && !anyShooters;
+        if (!anyFar && !anyShooters) finishOrder(order, level, CommandOrderStatus.ARRIVED);
+        return false;
     }
 
     private boolean hasArrived(ActiveOrder order, List<AbstractRecruitEntity> recruits,
-                               double distanceSqr, double arrivalDistance) {
-        if (order.formation <= 0) {
-            return distanceSqr <= arrivalDistance * arrivalDistance;
-        }
-        if (!order.commandIssued || order.ticksSinceIssue < FORMATION_SETTLE_TICKS) return false;
+                               BlockPos target, double arrivalDistance) {
+        if (!order.commandIssued) return false;
+        if (order.formation > 0 && order.ticksSinceIssue < FORMATION_SETTLE_TICKS) return false;
 
-        int inPlace = 0;
-        for (AbstractRecruitEntity recruit : recruits) {
-            if (isAtAssignedSpot(recruit)) inPlace++;
-        }
-        return inPlace >= Math.max(1, (int) Math.ceil(recruits.size() * FORMATION_ARRIVED_SHARE));
+        return CommandMarchProgress.enoughArrived(recruits, recruit -> order.formation > 0
+                ? isAtAssignedSpot(recruit)
+                : horizontalDistSqr(recruit.position(), Vec3.atCenterOf(target)) <= arrivalDistance * arrivalDistance);
     }
 
     private boolean isAtAssignedSpot(AbstractRecruitEntity recruit) {
         Vec3 assigned = recruit.getHoldPos();
-        if (assigned == null) return recruit.isInFormation;
+        if (assigned == null) return false;
         double dx = recruit.getX() - assigned.x;
         double dz = recruit.getZ() - assigned.z;
         return dx * dx + dz * dz <= FORMATION_SLOT_TOLERANCE * FORMATION_SLOT_TOLERANCE;
@@ -412,11 +398,28 @@ final class CommandOrderRuntime {
         return key;
     }
 
-    private double distanceSqrToTarget(List<AbstractRecruitEntity> recruits, BlockPos target) {
-        Vec3 center = centerOf(recruits);
-        double dx = center.x - (target.getX() + 0.5D);
-        double dz = center.z - (target.getZ() + 0.5D);
-        return dx * dx + dz * dz;
+    private double meanRemainingDistance(ActiveOrder order, List<AbstractRecruitEntity> recruits, BlockPos target) {
+        double distance = 0;
+        for (AbstractRecruitEntity recruit : recruits) {
+            Vec3 assigned = order.formation > 0 ? recruit.getHoldPos() : null;
+            if (assigned == null) assigned = Vec3.atCenterOf(target);
+            distance += Math.sqrt(horizontalDistSqr(recruit.position(), assigned));
+        }
+        return distance / recruits.size();
+    }
+
+    private static void halt(List<AbstractRecruitEntity> recruits) {
+        for (AbstractRecruitEntity recruit : recruits) {
+            recruit.setTarget(null);
+            recruit.clearMovePos();
+            recruit.setFollowState(2);
+            recruit.getNavigation().stop();
+        }
+    }
+
+    private static void finishOrder(ActiveOrder order, ServerLevel level, CommandOrderStatus status) {
+        order.status = status;
+        order.expiresAt = level.getGameTime() + (status == CommandOrderStatus.ARRIVED ? 100 : 400);
     }
 
     private static boolean intersects(Iterable<UUID> left, Iterable<UUID> right) {
@@ -446,10 +449,9 @@ final class CommandOrderRuntime {
         private UUID pursuingObject;
         private boolean tight;
         private boolean holdFormation;
-        private Vec3 lastCenter;
-        private int stagnantTicks;
-        private int stallReissues;
-        private double bestDistanceSqr = Double.MAX_VALUE;
+        private final CommandMarchProgress progress = new CommandMarchProgress();
+        private CommandOrderStatus status = CommandOrderStatus.MOVING;
+        private long expiresAt;
 
         private ActiveOrder(UUID ownerId, UUID rootGroupId, List<UUID> members, ResourceLocation dimension) {
             this.ownerId = ownerId;
@@ -473,10 +475,8 @@ final class CommandOrderRuntime {
             commandIssued = false;
             issuedWaypoint = null;
             ticksSinceIssue = 0;
-            stagnantTicks = 0;
-            stallReissues = 0;
-            lastCenter = null;
-            bestDistanceSqr = Double.MAX_VALUE;
+            progress.reset();
+            status = CommandOrderStatus.MOVING;
         }
     }
 }

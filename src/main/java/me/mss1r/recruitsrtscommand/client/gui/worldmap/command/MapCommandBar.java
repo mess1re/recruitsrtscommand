@@ -9,6 +9,7 @@ import me.mss1r.recruitsrtscommand.client.command.MapCommandTool;
 import me.mss1r.recruitsrtscommand.common.command.CommandGroupSnapshot;
 import me.mss1r.recruitsrtscommand.common.command.CommandUnitSnapshot;
 import me.mss1r.recruitsrtscommand.common.command.CommandUnitType;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.resources.language.I18n;
@@ -82,6 +83,11 @@ final class MapCommandBar {
                 "gui.recruitsrtscommand.status.ranged");
         drawTypeCount(graphics, font, x, CommandUnitType.CAVALRY, cavalry, kinds,
                 "gui.recruitsrtscommand.status.cavalry");
+        String orders = MapCommandOrderStatuses.describe(MapCommandClientState.routes(Minecraft.getInstance().level),
+                MapCommandClientState::isUnitSelected);
+        if (!orders.isEmpty()) graphics.drawString(font,
+                font.plainSubstrByWidth(orders, Math.max(20, view.screenWidth() - STATUS_X - 12)),
+                STATUS_X, STATUS_Y + 23, 0xFFE4CF96);
     }
 
     int drawTypeCount(GuiGraphics graphics, Font font, int x, CommandUnitType type, int count,

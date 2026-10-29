@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.function.Function;
 
 final class CommandVisibility {
     record Watcher(Vec3 position, double range) {
@@ -32,6 +33,14 @@ final class CommandVisibility {
             if (dx * dx + dz * dz <= watcher.range() * watcher.range()) return true;
         }
         return false;
+    }
+
+    <T> List<T> visibleTargets(UUID owner, List<T> targets, Function<T, BlockPos> currentPosition) {
+        List<T> visible = new ArrayList<>();
+        for (T target : targets) {
+            if (sees(owner, currentPosition.apply(target))) visible.add(target);
+        }
+        return visible;
     }
 
     List<CommandUnitSnapshot> units(UUID owner, List<CommandUnitSnapshot> units) {

@@ -62,6 +62,26 @@ class CommandVisibilityTest {
                 List.of(new CommandVisibility.Watcher(new Vec3(0.5, 64, 0.5), 9)), scouting, health);
     }
 
+    @Test
+    void pursuitUsesCurrentPositionsEvenIfTheMapHasNotSentAnotherSnapshot() {
+        BlockPos.MutableBlockPos position = new BlockPos.MutableBlockPos(2, 64, 0);
+        List<BlockPos.MutableBlockPos> targets = List.of(position);
+        CommandVisibility sight = visibility(true, false);
+        assertEquals(targets, sight.visibleTargets(stranger, targets, target -> target));
+        position.set(100, 64, 0);
+        assertTrue(sight.visibleTargets(stranger, targets, target -> target).isEmpty());
+        assertEquals(targets, visibility(false, false).visibleTargets(stranger, targets, target -> target));
+    }
+
+    @Test
+    void losingOneMemberOfAVisibleEnemySquadDoesNotExposeItsHiddenMembers() {
+        BlockPos near = new BlockPos(2, 64, 0);
+        BlockPos far = new BlockPos(100, 64, 0);
+        assertEquals(List.of(near), visibility(true, false).visibleTargets(stranger, List.of(near, far), target -> target));
+        CommandVisibility noWatchers = new CommandVisibility(viewer, List.of(), true, false);
+        assertTrue(noWatchers.visibleTargets(stranger, List.of(near), target -> target).isEmpty());
+    }
+
     private CommandUnitSnapshot unit(BlockPos position) {
         return new CommandUnitSnapshot(UUID.randomUUID(), position, CommandUnitType.RANGED,
                 73, 3, true, true, true, -170);

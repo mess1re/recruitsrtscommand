@@ -78,5 +78,11 @@
   "gui.recruitsrtscommand.controls.tight.desc": "плотный строй",
   "gui.recruitsrtscommand.object.unnamed": "Без названия",
   "gui.recruitsrtscommand.object.no_actions": "С этим сейчас ничего не сделать",
-  "gui.recruitsrtscommand.object.point_at": "%s — укажи место правой кнопкой (левая или Esc отменяют)"
+  "gui.recruitsrtscommand.object.point_at": "%s — укажи место правой кнопкой (левая или Esc отменяют)",
+  "gui.recruitsrtscommand.order.moving": "Идут",
+  "gui.recruitsrtscommand.order.repathing": "Ищут путь",
+  "gui.recruitsrtscommand.order.pursuing": "Преследуют",
+  "gui.recruitsrtscommand.order.arrived": "На позиции",
+  "gui.recruitsrtscommand.order.blocked": "Путь заблокирован",
+  "gui.recruitsrtscommand.order.target_lost": "Цель потеряна"
 }

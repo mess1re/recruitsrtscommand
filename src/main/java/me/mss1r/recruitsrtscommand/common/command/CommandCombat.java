@@ -47,17 +47,18 @@ final class CommandCombat {
                 : shooter instanceof BowmanEntity ? 44.0D : 0.0D;
         if (reach <= 0.0D) return;
 
-        double holdRange = reach * 0.75D;
-        Vec3 toTarget = target.position().subtract(shooter.position());
-        double distance = toTarget.horizontalDistance();
-
-        Vec3 stand = distance <= holdRange
-                ? shooter.position()
-                : shooter.position().add(toTarget.multiply(1 / distance, 0, 1 / distance).scale(holdRange));
+        Vec3 stand = shootingPosition(shooter.position(), target.position(), reach * 0.75D);
 
         shooter.setShouldMovePos(false);
         shooter.setHoldPos(stand);
         shooter.setFollowState(3);
+    }
+
+    static Vec3 shootingPosition(Vec3 shooter, Vec3 target, double holdRange) {
+        Vec3 toTarget = target.subtract(shooter);
+        double distance = toTarget.horizontalDistance();
+        if (distance <= holdRange || distance < 0.0001D) return shooter;
+        return shooter.add(toTarget.multiply(1 / distance, 0, 1 / distance).scale(distance - holdRange));
     }
 
     static Map<UUID, LivingEntity> assignTargets(List<AbstractRecruitEntity> attackers,

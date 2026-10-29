@@ -18,6 +18,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.ArrayList;
@@ -149,6 +150,27 @@ final class CommandMapSnapshots {
             }
         }
         return seen;
+    }
+
+    List<LivingEntity> visiblePursuitTargets(ServerPlayer player, UUID groupId, UUID objectId) {
+        List<LivingEntity> targets = new ArrayList<>();
+        ServerLevel level = player.serverLevel();
+        CommandVisibility sight = visibility(player);
+        if (objectId != null) {
+            MapObjectSnapshot object = buildObjects(player).stream()
+                    .filter(candidate -> objectId.equals(candidate.id())).findFirst().orElse(null);
+            if (object != null && level.getEntity(objectId) instanceof LivingEntity target && target.isAlive()) {
+                targets.addAll(sight.visibleTargets(object.ownerId(), List.of(target), Entity::blockPosition));
+            }
+        } else {
+            for (RecruitsGroup group : getAllGroups(player)) {
+                if (!Objects.equals(groupId, group.getUUID())) continue;
+                targets.addAll(sight.visibleTargets(group.getPlayerUUID(),
+                        resolveGroupMembers(level, group), Entity::blockPosition));
+                break;
+            }
+        }
+        return targets;
     }
 
     List<CommandGroupSnapshot> buildSnapshots(ServerPlayer player) {
