@@ -9,6 +9,9 @@
 
 ### Fixed
 
+- Explicit move routes take priority over combat movement, including mounted
+  charges and movement into formation. Combat behavior resumes after arrival or
+  cancellation without changing the squad's aggression setting.
 - Camera movement no longer depends on frame rate. Leaving a world clears control
   groups and command tools; closing the map cancels unfinished gestures and menus.
 - Unit dots and symbols share relation colors: own green, allied blue, neutral

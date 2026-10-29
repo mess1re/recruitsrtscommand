@@ -40,6 +40,7 @@ final class CommandOrderRuntime {
     private static final double PURSUIT_CONTACT = 12.0D;
 
     private final Map<OrderKey, ActiveOrder> orders = new HashMap<>();
+    private final CommandMarchPriority marching = new CommandMarchPriority();
     private final CommandMapSnapshots snapshots;
 
     CommandOrderRuntime(CommandMapSnapshots snapshots) {
@@ -57,10 +58,12 @@ final class CommandOrderRuntime {
     void clearPlayerOrders(UUID playerId) {
         if (playerId == null) return;
         orders.entrySet().removeIf(entry -> playerId.equals(entry.getValue().ownerId));
+        marching.clearOwner(playerId);
     }
 
     void clearAll() {
         orders.clear();
+        marching.clear();
     }
 
     List<CommandOrderRoute> buildRoutes(ServerPlayer player) {
@@ -192,6 +195,7 @@ final class CommandOrderRuntime {
     }
 
     void tick(MinecraftServer server) {
+        marching.clear();
         if (server == null || orders.isEmpty()) return;
 
         double arrivalDistance = Math.max(1.0D, RecruitsRTSCommandServerConfig.ARRIVAL_DISTANCE_BLOCKS.get());
@@ -260,6 +264,10 @@ final class CommandOrderRuntime {
                 order.stagnantTicks = 0;
                 order.bestDistanceSqr = distanceSqr;
             }
+        }
+
+        for (AbstractRecruitEntity recruit : recruits) {
+            marching.claim(recruit.getUUID(), order.ownerId, order.dimension);
         }
 
         return false;
@@ -339,6 +347,11 @@ final class CommandOrderRuntime {
 
     private void issueMove(ServerPlayer owner, ServerLevel level, List<AbstractRecruitEntity> recruits,
                            ActiveOrder order, BlockPos surface, boolean newWaypoint) {
+        for (AbstractRecruitEntity recruit : recruits) {
+            CommandMarchGoals.install(recruit.goalSelector, () -> recruit.isAlive()
+                    && marching.contains(recruit.getUUID(), recruit.getOwnerUUID(),
+                    recruit.level().dimension().location()));
+        }
         if (newWaypoint) {
             standDown(recruits);
             RecruitCommanderUtil.setRecruitsClearTargets(recruits);
@@ -373,6 +386,7 @@ final class CommandOrderRuntime {
 
     void detachMembersFromOrders(UUID ownerId, ResourceLocation dimension,
                                          Collection<UUID> members) {
+        marching.remove(ownerId, dimension, members);
         Set<UUID> affected = members instanceof Set<UUID> set ? set : new HashSet<>(members);
         var iterator = orders.entrySet().iterator();
         while (iterator.hasNext()) {
