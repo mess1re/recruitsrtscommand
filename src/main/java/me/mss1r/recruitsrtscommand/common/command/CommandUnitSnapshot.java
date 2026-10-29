@@ -7,6 +7,7 @@ import java.util.UUID;
 public record CommandUnitSnapshot(UUID unitId, BlockPos position, CommandUnitType type, int health,
                                   int aggro, boolean shields, boolean canVolley, boolean firing, float heading) {
     public static final int AGGRO_UNKNOWN = 15;
+    public static final int HEALTH_UNKNOWN = 255;
     public static final int AGGRO_NEUTRAL = 0;
 
     public CommandUnitSnapshot(UUID unitId, BlockPos position, CommandUnitType type, int health,
