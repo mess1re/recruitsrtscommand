@@ -45,31 +45,31 @@ public final class RecruitsRTSCommandNetwork {
 
         CHANNEL.registerMessage(packetId++, C2SRequestCommandMapSyncPacket.class,
                 C2SRequestCommandMapSyncPacket::encode, C2SRequestCommandMapSyncPacket::decode,
-                C2SRequestCommandMapSyncPacket::handle);
+                C2SRequestCommandMapSyncPacket::handle, java.util.Optional.of(NetworkDirection.PLAY_TO_SERVER));
         CHANNEL.registerMessage(packetId++, C2SCommandMoveOrderPacket.class,
                 C2SCommandMoveOrderPacket::encode, C2SCommandMoveOrderPacket::decode,
-                C2SCommandMoveOrderPacket::handle);
+                C2SCommandMoveOrderPacket::handle, java.util.Optional.of(NetworkDirection.PLAY_TO_SERVER));
         CHANNEL.registerMessage(packetId++, C2SCommandAttackGroupPacket.class,
                 C2SCommandAttackGroupPacket::encode, C2SCommandAttackGroupPacket::decode,
-                C2SCommandAttackGroupPacket::handle);
+                C2SCommandAttackGroupPacket::handle, java.util.Optional.of(NetworkDirection.PLAY_TO_SERVER));
         CHANNEL.registerMessage(packetId++, C2SCommandAttackObjectPacket.class,
                 C2SCommandAttackObjectPacket::encode, C2SCommandAttackObjectPacket::decode,
-                C2SCommandAttackObjectPacket::handle);
+                C2SCommandAttackObjectPacket::handle, java.util.Optional.of(NetworkDirection.PLAY_TO_SERVER));
         CHANNEL.registerMessage(packetId++, C2SCommandStrategicFirePacket.class,
                 C2SCommandStrategicFirePacket::encode, C2SCommandStrategicFirePacket::decode,
-                C2SCommandStrategicFirePacket::handle);
+                C2SCommandStrategicFirePacket::handle, java.util.Optional.of(NetworkDirection.PLAY_TO_SERVER));
         CHANNEL.registerMessage(packetId++, C2SCommandFacePacket.class,
                 C2SCommandFacePacket::encode, C2SCommandFacePacket::decode,
-                C2SCommandFacePacket::handle);
+                C2SCommandFacePacket::handle, java.util.Optional.of(NetworkDirection.PLAY_TO_SERVER));
         CHANNEL.registerMessage(packetId++, C2SCommandStrategicFireHoldPacket.class,
                 C2SCommandStrategicFireHoldPacket::encode, C2SCommandStrategicFireHoldPacket::decode,
-                C2SCommandStrategicFireHoldPacket::handle);
+                C2SCommandStrategicFireHoldPacket::handle, java.util.Optional.of(NetworkDirection.PLAY_TO_SERVER));
         CHANNEL.registerMessage(packetId++, C2SCommandBehaviorPacket.class,
                 C2SCommandBehaviorPacket::encode, C2SCommandBehaviorPacket::decode,
-                C2SCommandBehaviorPacket::handle);
+                C2SCommandBehaviorPacket::handle, java.util.Optional.of(NetworkDirection.PLAY_TO_SERVER));
         CHANNEL.registerMessage(packetId++, C2SCommandObjectActionPacket.class,
                 C2SCommandObjectActionPacket::encode, C2SCommandObjectActionPacket::decode,
-                C2SCommandObjectActionPacket::handle);
+                C2SCommandObjectActionPacket::handle, java.util.Optional.of(NetworkDirection.PLAY_TO_SERVER));
         CHANNEL.registerMessage(packetId++, S2CCommandMapSnapshotsPacket.class,
                 S2CCommandMapSnapshotsPacket::encode, S2CCommandMapSnapshotsPacket::decode,
                 S2CCommandMapSnapshotsPacket::handle, java.util.Optional.of(NetworkDirection.PLAY_TO_CLIENT));

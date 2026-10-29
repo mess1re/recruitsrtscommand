@@ -35,11 +35,9 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
-import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -68,6 +66,7 @@ public final class MapCommandOrderService {
     private final Map<OrderKey, ActiveOrder> orders = new HashMap<>();
     private final Map<UUID, Map<UUID, SelectionTarget>> playerSelections = new HashMap<>();
     private final Map<UUID, Map<UUID, MapObjectSnapshot>> visibleObjects = new HashMap<>();
+    private final SnapshotRequestLimiter snapshotRequests = new SnapshotRequestLimiter();
 
     private MapCommandOrderService() {
     }
@@ -77,6 +76,8 @@ public final class MapCommandOrderService {
     }
 
     public void sendSnapshots(ServerPlayer player, List<UUID> selected) {
+        if (player == null || !snapshotRequests.acquire(player.getUUID(),
+                player.serverLevel().getServer().overworld().getGameTime())) return;
         List<MapObjectSnapshot> objects = buildObjects(player);
         rememberVisibleObjects(player, objects);
         Map<UUID, List<UUID>> crews = new HashMap<>();
@@ -212,7 +213,7 @@ public final class MapCommandOrderService {
                     : resolveMembers(level, order.memberIds, order.ownerId);
             BlockPos origin = walking.isEmpty() ? null : BlockPos.containing(centerOf(walking));
             routes.add(new CommandOrderRoute(new ArrayList<>(order.memberIds), order.dimension,
-                    origin, new ArrayList<>(order.waypoints)));
+                    origin, order.waypoints.snapshot()));
         }
         return routes;
     }
@@ -295,9 +296,7 @@ public final class MapCommandOrderService {
 
         order.waypoints.clear();
         order.resetIssueState();
-        if (order.waypoints.isEmpty() || !Objects.equals(order.waypoints.peekLast(), surface)) {
-            order.waypoints.addLast(surface.immutable());
-        }
+        order.waypoints.append(surface);
     }
 
     private void appendMoveOrder(ServerPlayer player, SelectionTarget selection, BlockPos surface,
@@ -365,9 +364,7 @@ public final class MapCommandOrderService {
     }
 
     private static void appendWaypoint(ActiveOrder order, BlockPos surface) {
-        if (order.waypoints.isEmpty() || !Objects.equals(order.waypoints.peekLast(), surface)) {
-            order.waypoints.addLast(surface.immutable());
-        }
+        order.waypoints.append(surface);
     }
 
     public void submitAttackGroupOrder(ServerPlayer player, UUID attackerSelectionId, UUID targetSelectionId) {
@@ -482,6 +479,7 @@ public final class MapCommandOrderService {
     public void submitStrategicFireOrder(ServerPlayer player, UUID selectionId, List<UUID> members,
                                          BlockPos target, int radiusX, int radiusZ, int shapeOrdinal) {
         if (player == null || selectionId == null || target == null) return;
+        if (!CommandLimits.validFireZone(radiusX, radiusZ, shapeOrdinal, FireZoneShape.values().length)) return;
 
         SelectionTarget selection = members == null || members.isEmpty()
                 ? resolveOwnedSelection(player, selectionId)
@@ -489,7 +487,7 @@ public final class MapCommandOrderService {
         if (selection == null || !canCommand(player, selection)) return;
 
         ServerLevel level = serverLevel(player.serverLevel().getServer(), selection.dimension);
-        if (level == null) return;
+        if (level == null || !level.getWorldBorder().isWithinBounds(target)) return;
 
         detachMembersFromOrders(player.getUUID(), selection.dimension, selection.memberIds);
         BlockPos surfaceTarget = FormationUtils.getPositionOrSurface(level, target);
@@ -644,12 +642,14 @@ public final class MapCommandOrderService {
         orders.entrySet().removeIf(entry -> playerId.equals(entry.getValue().ownerId));
         playerSelections.remove(playerId);
         visibleObjects.remove(playerId);
+        snapshotRequests.remove(playerId);
     }
 
     public void clearAll() {
         orders.clear();
         playerSelections.clear();
         visibleObjects.clear();
+        snapshotRequests.clear();
     }
 
     private boolean tickOrder(MinecraftServer server, OrderKey key, ActiveOrder order, double arrivalDistance,
@@ -1271,7 +1271,7 @@ public final class MapCommandOrderService {
         private UUID rootGroupId;
         private ResourceLocation dimension;
         private final Set<UUID> memberIds = new LinkedHashSet<>();
-        private final Deque<BlockPos> waypoints = new ArrayDeque<>();
+        private final CommandRouteQueue waypoints = new CommandRouteQueue();
         private boolean commandIssued;
         private BlockPos issuedWaypoint;
         private int ticksSinceIssue;
@@ -1295,7 +1295,7 @@ public final class MapCommandOrderService {
 
         private ActiveOrder copyMarchFor(Collection<UUID> members) {
             ActiveOrder copy = new ActiveOrder(ownerId, rootGroupId, List.copyOf(members), dimension);
-            copy.waypoints.addAll(waypoints);
+            copy.waypoints.copyFrom(waypoints);
             copy.formation = formation;
             copy.facingYaw = facingYaw;
             copy.tight = tight;

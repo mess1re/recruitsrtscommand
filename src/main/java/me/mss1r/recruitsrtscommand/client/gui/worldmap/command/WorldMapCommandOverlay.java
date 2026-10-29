@@ -17,6 +17,7 @@ import me.mss1r.recruitsrtscommand.client.command.MapPositionSmoothing;
 import me.mss1r.recruitsrtscommand.client.command.MapCommandTool;
 import me.mss1r.recruitsrtscommand.client.render.MapRenderUtil;
 import me.mss1r.recruitsrtscommand.common.command.CommandGroupSnapshot;
+import me.mss1r.recruitsrtscommand.common.command.CommandLimits;
 import me.mss1r.recruitsrtscommand.common.command.CommandOrderRoute;
 import me.mss1r.recruitsrtscommand.api.MapObjectAction;
 import me.mss1r.recruitsrtscommand.api.MapObjectSnapshot;
@@ -87,7 +88,7 @@ public final class WorldMapCommandOverlay implements WorldMapOverlay {
     private static final long DOUBLE_CLICK_MILLIS = 350L;
     private static final int[][] OUTLINE_OFFSETS = {{0, -1}, {0, 1}, {-1, 0}, {1, 0}};
     private static final double UNIT_DOT_MIN_ZOOM = 0.60D;
-    private static final double MAX_ZONE_RADIUS = 48.0D;
+    private static final double MAX_ZONE_RADIUS = CommandLimits.MAX_FIRE_RADIUS;
     private static final double ZONE_DRAG_SLOP = 3.0D;
     private static final int BUTTON_FORMATION = 0;
     private static final int BUTTON_FIRE_ZONE = 1;

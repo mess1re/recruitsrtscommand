@@ -26,6 +26,10 @@ Minecraft 1.20.1 and Forge 47 are supported.
 
 See the [wiki](https://github.com/mess1re/recruitsrtscommand/wiki) for controls, orders and server configuration.
 
+Map updates are accepted at most once every five server ticks per player. A move
+route holds up to 128 waypoints; further queued points are ignored until space is
+available. Fire-zone radii are limited to 48 blocks on both the client and server.
+
 ## API
 
 Release builds are available through JitPack:

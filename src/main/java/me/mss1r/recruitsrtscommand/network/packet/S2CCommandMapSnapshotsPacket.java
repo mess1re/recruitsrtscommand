@@ -2,6 +2,7 @@ package me.mss1r.recruitsrtscommand.network.packet;
 
 import me.mss1r.recruitsrtscommand.client.command.ClientCommandPacketHandler;
 import me.mss1r.recruitsrtscommand.common.command.CommandGroupSnapshot;
+import me.mss1r.recruitsrtscommand.common.command.CommandLimits;
 import me.mss1r.recruitsrtscommand.common.command.CommandOrderRoute;
 import me.mss1r.recruitsrtscommand.api.MapObjectSnapshot;
 import me.mss1r.recruitsrtscommand.common.command.CommandUnitSnapshot;
@@ -19,8 +20,13 @@ import java.util.function.Supplier;
 public record S2CCommandMapSnapshotsPacket(List<CommandGroupSnapshot> snapshots,
                                            List<CommandOrderRoute> routes,
                                            List<MapObjectSnapshot> objects) {
+    private static final int MAX_ENTRIES = 4096;
+    private static final int MAX_LINES = 64;
+    private static final int MAX_ACTIONS = 128;
+    private static final int MAX_OBJECT_WAYPOINTS = 4096;
+
     public static S2CCommandMapSnapshotsPacket decode(FriendlyByteBuf buf) {
-        int count = buf.readVarInt();
+        int count = CommandPacketCodecs.readCount(buf, MAX_ENTRIES, "count");
         List<CommandGroupSnapshot> snapshots = new ArrayList<>(count);
         for (int i = 0; i < count; i++) {
             java.util.UUID selectionId = buf.readUUID();
@@ -28,7 +34,7 @@ public record S2CCommandMapSnapshotsPacket(List<CommandGroupSnapshot> snapshots,
             BlockPos anchor = buf.readBlockPos();
             net.minecraft.resources.ResourceLocation dimension = buf.readResourceLocation();
 
-            int unitCount = buf.readVarInt();
+            int unitCount = CommandPacketCodecs.readCount(buf, CommandLimits.MAX_MEMBERS, "unitCount");
             List<CommandUnitSnapshot> units = new ArrayList<>(unitCount);
             for (int j = 0; j < unitCount; j++) {
                 java.util.UUID unitId = buf.readUUID();
@@ -43,18 +49,18 @@ public record S2CCommandMapSnapshotsPacket(List<CommandGroupSnapshot> snapshots,
             snapshots.add(new CommandGroupSnapshot(selectionId, ownerId, anchor, dimension, units));
         }
 
-        int routeCount = buf.readVarInt();
+        int routeCount = CommandPacketCodecs.readCount(buf, MAX_ENTRIES, "routeCount");
         List<CommandOrderRoute> routes = new ArrayList<>(routeCount);
         for (int i = 0; i < routeCount; i++) {
             List<java.util.UUID> members = CommandPacketCodecs.readMembers(buf);
             net.minecraft.resources.ResourceLocation routeDimension = buf.readResourceLocation();
             BlockPos origin = buf.readBoolean() ? buf.readBlockPos() : null;
-            int legs = buf.readVarInt();
+            int legs = CommandPacketCodecs.readCount(buf, CommandLimits.MAX_WAYPOINTS, "legs");
             List<BlockPos> waypoints = new ArrayList<>(legs);
             for (int j = 0; j < legs; j++) waypoints.add(buf.readBlockPos());
             routes.add(new CommandOrderRoute(members, routeDimension, origin, waypoints));
         }
-        int objectCount = buf.readVarInt();
+        int objectCount = CommandPacketCodecs.readCount(buf, MAX_ENTRIES, "objectCount");
         List<MapObjectSnapshot> objects = new ArrayList<>(objectCount);
         for (int i = 0; i < objectCount; i++) {
             java.util.UUID id = buf.readUUID();
@@ -67,10 +73,10 @@ public record S2CCommandMapSnapshotsPacket(List<CommandGroupSnapshot> snapshots,
             net.minecraft.resources.ResourceLocation world = buf.readResourceLocation();
             int condition = buf.readUnsignedByte();
             int pip = buf.readInt();
-            int lineCount = buf.readVarInt();
+            int lineCount = CommandPacketCodecs.readCount(buf, MAX_LINES, "lineCount");
             List<net.minecraft.network.chat.Component> lines = new ArrayList<>(lineCount);
             for (int j = 0; j < lineCount; j++) lines.add(buf.readComponent());
-            int actionCount = buf.readVarInt();
+            int actionCount = CommandPacketCodecs.readCount(buf, MAX_ACTIONS, "actionCount");
             List<me.mss1r.recruitsrtscommand.api.MapObjectAction> actions = new ArrayList<>(actionCount);
             for (int j = 0; j < actionCount; j++) {
                 actions.add(new me.mss1r.recruitsrtscommand.api.MapObjectAction(
@@ -83,13 +89,13 @@ public record S2CCommandMapSnapshotsPacket(List<CommandGroupSnapshot> snapshots,
                         buf.readBoolean() ? buf.readUtf(64) : null,
                         buf.readBoolean()));
             }
-            int legCount = buf.readVarInt();
+            int legCount = CommandPacketCodecs.readCount(buf, MAX_OBJECT_WAYPOINTS, "legCount");
             List<BlockPos> route = new ArrayList<>(legCount);
             for (int j = 0; j < legCount; j++) route.add(buf.readBlockPos());
-            int crewCount = buf.readVarInt();
+            int crewCount = CommandPacketCodecs.readCount(buf, CommandLimits.MAX_MEMBERS, "crewCount");
             List<java.util.UUID> crew = new ArrayList<>(crewCount);
             for (int j = 0; j < crewCount; j++) crew.add(buf.readUUID());
-            int orderCount = buf.readVarInt();
+            int orderCount = CommandPacketCodecs.readCount(buf, me.mss1r.recruitsrtscommand.api.MapOrder.values().length, "orderCount");
             java.util.Map<me.mss1r.recruitsrtscommand.api.MapOrder, String> orders =
                     new java.util.EnumMap<>(me.mss1r.recruitsrtscommand.api.MapOrder.class);
             for (int j = 0; j < orderCount; j++) {
@@ -106,7 +112,7 @@ public record S2CCommandMapSnapshotsPacket(List<CommandGroupSnapshot> snapshots,
     }
 
     public static void encode(S2CCommandMapSnapshotsPacket packet, FriendlyByteBuf buf) {
-        buf.writeVarInt(packet.snapshots.size());
+        CommandPacketCodecs.writeCount(buf, packet.snapshots.size(), MAX_ENTRIES, "packet.snapshots.size()");
         for (CommandGroupSnapshot snapshot : packet.snapshots) {
             buf.writeUUID(snapshot.selectionId());
             buf.writeUUID(snapshot.ownerId());
@@ -114,7 +120,7 @@ public record S2CCommandMapSnapshotsPacket(List<CommandGroupSnapshot> snapshots,
             buf.writeResourceLocation(snapshot.dimension());
 
             List<CommandUnitSnapshot> units = snapshot.units();
-            buf.writeVarInt(units.size());
+            CommandPacketCodecs.writeCount(buf, units.size(), CommandLimits.MAX_MEMBERS, "units.size()");
             for (CommandUnitSnapshot unit : units) {
                 buf.writeUUID(unit.unitId());
                 buf.writeBlockPos(unit.position());
@@ -125,17 +131,17 @@ public record S2CCommandMapSnapshotsPacket(List<CommandGroupSnapshot> snapshots,
             }
         }
 
-        buf.writeVarInt(packet.routes.size());
+        CommandPacketCodecs.writeCount(buf, packet.routes.size(), MAX_ENTRIES, "packet.routes.size()");
         for (CommandOrderRoute route : packet.routes) {
             CommandPacketCodecs.writeMembers(buf, route.members());
             buf.writeResourceLocation(route.dimension());
             buf.writeBoolean(route.origin() != null);
             if (route.origin() != null) buf.writeBlockPos(route.origin());
-            buf.writeVarInt(route.waypoints().size());
+            CommandPacketCodecs.writeCount(buf, route.waypoints().size(), CommandLimits.MAX_WAYPOINTS, "route.waypoints().size()");
             for (BlockPos waypoint : route.waypoints()) buf.writeBlockPos(waypoint);
         }
 
-        buf.writeVarInt(packet.objects.size());
+        CommandPacketCodecs.writeCount(buf, packet.objects.size(), MAX_ENTRIES, "packet.objects.size()");
         for (MapObjectSnapshot object : packet.objects) {
             buf.writeUUID(object.id());
             buf.writeBoolean(object.icon().texture() != null);
@@ -150,10 +156,10 @@ public record S2CCommandMapSnapshotsPacket(List<CommandGroupSnapshot> snapshots,
             buf.writeResourceLocation(object.dimension());
             buf.writeByte(object.condition());
             buf.writeInt(object.pipColor());
-            buf.writeVarInt(object.lines().size());
+            CommandPacketCodecs.writeCount(buf, object.lines().size(), MAX_LINES, "object.lines().size()");
             for (net.minecraft.network.chat.Component line : object.lines()) buf.writeComponent(line);
 
-            buf.writeVarInt(object.actions().size());
+            CommandPacketCodecs.writeCount(buf, object.actions().size(), MAX_ACTIONS, "object.actions().size()");
             for (me.mss1r.recruitsrtscommand.api.MapObjectAction action : object.actions()) {
                 buf.writeUtf(action.id(), 128);
                 buf.writeComponent(action.label());
@@ -167,11 +173,11 @@ public record S2CCommandMapSnapshotsPacket(List<CommandGroupSnapshot> snapshots,
                 if (action.group() != null) buf.writeUtf(action.group(), 64);
                 buf.writeBoolean(action.selected());
             }
-            buf.writeVarInt(object.route().size());
+            CommandPacketCodecs.writeCount(buf, object.route().size(), MAX_OBJECT_WAYPOINTS, "object.route().size()");
             for (BlockPos leg : object.route()) buf.writeBlockPos(leg);
-            buf.writeVarInt(object.crew().size());
+            CommandPacketCodecs.writeCount(buf, object.crew().size(), CommandLimits.MAX_MEMBERS, "object.crew().size()");
             for (java.util.UUID member : object.crew()) buf.writeUUID(member);
-            buf.writeVarInt(object.orders().size());
+            CommandPacketCodecs.writeCount(buf, object.orders().size(), me.mss1r.recruitsrtscommand.api.MapOrder.values().length, "object.orders().size()");
             for (java.util.Map.Entry<me.mss1r.recruitsrtscommand.api.MapOrder, String> order
                     : object.orders().entrySet()) {
                 buf.writeVarInt(order.getKey().ordinal());
